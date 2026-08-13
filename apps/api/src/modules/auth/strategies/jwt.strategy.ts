@@ -27,12 +27,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     config: ConfigService,
     private readonly usersRepo: UsersRepository,
   ) {
-    // STEP 1: Passport extracts the bearer token from the Authorization
+    // STEP 1: The signing secret must be configured for signature checks
+    //         to mean anything. A silent fallback (the previous
+    //         'dev-only-secret') would make every token signed with that
+    //         well-known value valid — fail loud at boot instead, so a
+    //         missing env var is a startup error, never a security hole.
+    const secret = config.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is not set — refusing to start without a signing secret');
+    }
+
+    // STEP 2: Passport extracts the bearer token from the Authorization
     //         header and verifies it with the configured secret.
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') ?? 'dev-only-secret',
+      secretOrKey: secret,
     });
   }
 
@@ -44,7 +54,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // STEP 2: An inactive account must stop working immediately, not when
     //         the token expires — that is what IsActive means (Feature 2
     //         toggles it).
-    const user = await this.usersRepo.findByIdWithPerson(payload.userId);
+    const user = await this.usersRepo.findById(payload.userId);
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Account is no longer active');
     }

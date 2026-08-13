@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "@/shared/providers/query-provider";
 
 // Document fonts: Inter for UI text, JetBrains Mono for IDs — both feed the
 // --font-sans/--font-mono tokens in ui-tokens.md via next/font/google.
@@ -30,7 +31,12 @@ export default function RootLayout({
           to document.body, so a provider nested inside a route layout would
           not cover Sheet/portal'd content (app shell 0.C.1). */}
       <body>
-        <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+        {/* QueryProvider sits at the root (outside AppShell) so every
+            route — the public login and the protected shell alike — can
+            useQuery; TooltipProvider must cover portal'd content. */}
+        <QueryProvider>
+          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+        </QueryProvider>
       </body>
     </html>
   );

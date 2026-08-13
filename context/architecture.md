@@ -155,7 +155,7 @@ Table People {
 
 Table Users {
   UserID int [pk, increment]
-  PersonID int [ref: > People.PersonID]
+  PersonID int [unique, ref: > People.PersonID, note: 'one account per person — enforced by unique constraint, 2.1']
   Username varchar [unique]
   Password varchar [note: 'bcrypt hash only, never plaintext']
   IsActive boolean

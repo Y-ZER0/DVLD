@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils"
 // PasswordInput — masked password field with a lock icon on the left and a
 // show/hide toggle on the right (ui-registry.md § PasswordInput). The mask
 // is pure presentation: toggling to "text" only changes the input type,
-// the value is never logged or exposed anywhere else.
+// the value is never logged or exposed anywhere else. Lives in shared/
+// (not features/auth/) because the auth sign-in form AND Feature 2.2's
+// user-account modals use it — invariant #13 forbids a feature importing
+// from another feature, so cross-feature UI goes here (same precedent as
+// the AppShell components).
 
 const PasswordInput = forwardRef<
   HTMLInputElement,

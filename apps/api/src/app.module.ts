@@ -3,6 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { LookupModule } from './modules/lookup/lookup.module';
+import { PeopleModule } from './modules/people/people.module';
+import { UsersModule } from './modules/users/users.module';
 
 // Root module: loads env globally, then wires TypeORM to Supabase using the
 // runtime (pooler) URL. synchronize stays on only outside production —
@@ -21,6 +24,9 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
     AuthModule,
+    PeopleModule,
+    UsersModule,
+    LookupModule,
   ],
   controllers: [AppController],
 })

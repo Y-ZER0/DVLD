@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useLogin } from "../hooks/use-login"
-import { PasswordInput } from "./password-input"
+import { PasswordInput } from "@/shared/components/password-input"
 
 // SignInForm — the right-hand functional panel of the login screen
 // (build-plan 0.B.2): Username + Password fields, a full-width primary

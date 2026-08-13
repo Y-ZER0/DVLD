@@ -17,9 +17,9 @@ with the tokens in `ui-tokens.md`.
 | `IconActionButton` | `Button` (ghost, icon size) | table Action columns | Pencil (edit), Trash (delete, destructive-colored), Key (reset password). Minimum 40×40px hit target even though the icon itself is smaller. |
 | `RolePill` | `Badge` (outline) | People Management "Roles" column | Small outline badges — "User", "Driver", "Citizen" — can stack multiple per row (see Marcus Reid: Driver + User). |
 | `FormModal` | `Dialog` | Add/Edit Person, Create User, Update Password, New Application, Issue License, Release confirmation, Renew/Replace confirmation | Title (`text-lg font-semibold`) + one-line muted description directly under it. Form fields in a 2-column grid where fields pair naturally (First/Last Name, Date of Birth/Gender), single column otherwise. Footer right-aligned: `Cancel` (outline) then primary action (filled `bg-primary`). Top-right `X` close icon. **Not** used for Detain — that's an inline form card, see `DetainLicenseFormCard` below. |
-| `Combobox` / searchable `Select` | shadcn `Command` + `Popover` | "Link to Person" picker, "Select a citizen" picker, driver picker | Type-to-filter list, each option formatted `Name (National-Number)`. |
+| `Combobox` / searchable `Select` | shadcn `Command` + `Popover` | "Link to Person" picker, "Select a citizen" picker, driver picker | Type-to-filter list, each option formatted `Name (National-Number)`. **Reusable `SearchableCombobox<T>`** in `shared/components/` — reuse it, don't re-implement. Imprint: `searchable-combobox.tsx` (Session 10). |
 | `AnnotatedSelect` | shadcn `Select` | License Class picker | Each option shows the constraint inline: `"Ordinary Driving License (Car) (Min age 18)"`. |
-| `ToggleSwitch` | shadcn `Switch` | Users active/inactive | Paired immediately with a `StatusPill` (`Active`/`Inactive`) to the right of the switch — never the switch alone. |
+| `ToggleSwitch` | shadcn `Switch` | Users active/inactive | Paired immediately with a `StatusPill` (`Active`/`Inactive`) to the right of the switch — never the switch alone. Imprint: `users-list.tsx` (Session 10). |
 | `TestPipelineStepper` | `Card` + custom row | Application detail page | Three stacked rows. Completed stage: light-green background (`bg-success/10`), green circular check icon. Current/active stage: numbered circle in `bg-warning` (orange), right-aligned `Scheduled <date>` pill + `Record Result` primary button. Locked stage: gray numbered circle, muted text, right-aligned `Locked` pill with a lock icon. |
 | `AppointmentHistoryList` | `Card` + row list | Application detail page | Reverse-chronological. Each row: `<Test Type> · <date>` left, fee + result `StatusPill` + `Locked` badge right. |
 | `TwoColumnDetailLayout` | grid | Application detail page | Left column: fixed-width summary `Card` (applicant/entity info + primary action button). Right column: flexible-width `Card` (pipeline/related records). Stacks to one column below `lg` breakpoint. |
@@ -35,6 +35,82 @@ with the tokens in `ui-tokens.md`.
 | `InlineEditableConfigTable` | `DataTable` + inline `Input`s | System Configuration | Numeric cells (Fee, Min age, Validity) are live `Input`s, not display text — no row-level edit button and no page-level Save button. Each input autosaves on blur/`Enter`; show a brief inline saved-state affordance per `ui-rules.md`. ID and title/name columns are always plain, non-editable text. |
 
 ## Captured Pattern Details (imprint)
+
+### DataTable (PeopleList)
+
+File: `apps/web/src/components/data-table.tsx` — consumed by `apps/web/src/features/people/components/people-list.tsx`
+Last updated: 2026-08-13
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | container `bg-card`; filter bar transparent on card |
+| Border           | container `border border-border`; filter bar + footer `border-t border-b border-border` |
+| Border radius    | `rounded-xl` (container) |
+| Text — primary   | name `text-sm font-medium`; National No. `font-mono text-sm`; body cells `text-sm` |
+| Text — secondary | country/email `text-xs text-muted-foreground`; footer count `text-xs text-muted-foreground` |
+| Spacing          | filter bar `p-4` (input `max-w-md h-10 pl-9`); table cell avatar block `gap-3`; footer `p-4`, buttons `gap-2` action cluster `gap-1` |
+| Hover state      | rows `hover:bg-muted/50` (shadcn TableRow default) |
+| Shadow           | `shadow-sm` |
+| Accent usage     | avatar fallback `bg-primary/10 text-primary` (soft blue initials); delete icon `text-destructive` |
+
+**Pattern notes:** Shared component extracted from the PeopleList implementation — every future list screen (Users, Applications, Drivers) renders `<DataTable>` with its own `columns` config, states, and empty node instead of copying this layout: filter input directly above the table, `overflow-x-auto` wrap for mobile, five-ish columns with Actions right-aligned (`justify-end`, `IconActionButton` size-10 ghost), footer with count/page left + Prev/Next right (both always rendered, disabled at edges). Loading = skeleton rows; error = centered retry; empty = `EmptyState` (icon + message) — never a bare header row. Filter debounce 300ms and page reset on filter commit stay in the feature component. People-specific rows: avatar initials from first two name words (`bg-primary/10 text-primary`), age computed client-side `"X yrs · Gender"`, contact stacked phone/email with truncate + `title`.
+
+### PersonFormModal (AddPersonModal / EditPersonModal)
+
+File: `apps/web/src/features/people/components/add-person-modal.tsx`, `edit-person-modal.tsx`, `person-form-fields.tsx`
+Last updated: 2026-08-13
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden` |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; grid `px-6 py-4 space-y-4`; field rows `space-y-1.5`, two-col `grid-cols-1 sm:grid-cols-2 gap-4`; footer `px-6 py-4` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground`; submit spinner `LoaderCircle animate-spin` |
+
+**Pattern notes:** First FormModal implementation — the template every Add/Edit modal follows: `DialogContent` `max-w-[550px] gap-0 overflow-hidden rounded-xl p-0`, title + one-line description (ui-registry FormModal rule), a `<form>` wrapping the field grid, then `DialogFooter` `border-t bg-background px-6 py-4` with right-aligned `Cancel` (outline, `bg-card h-10`) + primary `h-10`. Forms use react-hook-form + zod (library-docs §9): the schema mirrors the backend DTO (incl. `/^N-\d{8}$/`); RHF `register` for inputs, `Controller` for Selects (Gender, Country); errors render under each field from the resolver with `role="alert"`. DOB is a native `type="date"` input, native picker indicator hidden, single `CalendarIcon` absolutely right. Country select is a curated list (`features/people/countries.ts`), Add defaults "United States". Server errors surface in a `role="alert"` box (`border-destructive/40 bg-destructive/10 text-destructive` + `CircleAlert`) via `getApiErrorMessage` (`shared/lib/api-errors.ts`). Submit buttons show spinner + "Adding…"/"Saving…" while pending; on success the modal closes and the mutation's `invalidateQueries` refreshes the lists.
+
+### UserStatusCell (ToggleSwitch + StatusPill pair)
+
+File: `apps/web/src/features/users/components/users-list.tsx`
+Last updated: 2026-08-13
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | none (sits in a DataTable cell) |
+| Border           | none |
+| Border radius    | pill via `Badge` (`rounded-4xl` from primitive) |
+| Text — primary   | pill label `text-xs font-medium` (Badge) |
+| Text — secondary | "(you)" tag `text-xs text-muted-foreground` |
+| Spacing          | cell cluster `flex items-center gap-2.5`; pill `px-2 py-0.5` |
+| Hover state      | none |
+| Shadow           | none |
+| Accent usage     | Active pill `bg-success/10 text-success`; Inactive pill `bg-destructive/10 text-destructive`; checked Switch = `bg-primary` (primitive) |
+
+**Pattern notes:** The switch and pill are ONE cell and always render together — the switch carries the action, the pill carries the state text (ui-rules.md: never color alone). Session 10 decision: NOT optimistic — the row's switch disables while that row's mutation is in flight (`togglingId` per-row pending, since a mutation hook's global `isPending` can't distinguish rows) and the pill re-reads `isActive` on invalidation. Pill classes override the Badge default via tailwind-merge (bg/text groups), matching the DeletePersonDialog destructive-badge treatment. Add any future status-pair (e.g. Detained) in the same shape with the ui-rules mapping's token.
+
+### Combobox (Link to Person)
+
+File: `apps/web/src/shared/components/searchable-combobox.tsx` (usage example: `apps/web/src/features/users/components/create-user-account-modal.tsx`)
+Last updated: 2026-08-13
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | trigger `bg-card` (outline Button); popover `bg-popover` (Command) |
+| Border           | trigger `border-input` (Button outline variant); popover `ring-1 ring-foreground/10` (primitive) |
+| Border radius    | `rounded-lg` (primitive) |
+| Text — primary   | selected option `text-sm font-normal` on trigger; option name `text-sm` |
+| Text — secondary | trigger placeholder `text-muted-foreground`; option national no. `font-mono text-xs text-muted-foreground`; CommandEmpty `text-sm` |
+| Spacing          | trigger `h-10 w-full justify-between`; popover `w-[var(--radix-popover-trigger-width)]`; options `px-2 py-1.5 gap-2` (CommandItem) |
+| Hover state      | option `data-selected:bg-accent` (soft-blue selection, spec) |
+| Shadow           | `shadow-md` (PopoverContent primitive) |
+| Accent usage     | selection check `Check` `text-primary`, `opacity-100`/`opacity-0` on match |
+
+**Pattern notes:** First Combobox implementation, refactored Session 10 into a reusable generic (**`SearchableCombobox<T>`** in `shared/components/`, same placement logic as the shared DataTable): a feature hook (`useUnlinkedPeople`) feeds the FULL non-paginated option set (people/unlinked contract — a page window would hide options) and the component owns the dropdown + type-to-filter UX. Props: `options`/`isPending`/`isError`/`onRetry` (feed state), `getOptionKey`/`getOptionLabel`/`getOptionSecondary?` (rendering + identity — check marker compares keys, never reference equality, so a re-fetched array still highlights the pick), `triggerPlaceholder`/`searchPlaceholder`/`loadingMessage`/`errorMessage`/`emptyMessage`/`noMatchMessage(search)` (copy), `value: T | null`/`onValueChange(value: T | null)` (the owner keeps only the id it needs — the 2.2 modal stores `personId`), `id` for Label pairing, `invalid` mirrored as `aria-invalid`. Internals: `PopoverTrigger asChild > Button variant="outline"` with `role="combobox"` + `aria-expanded`, `PopoverContent align="start"` sized to the trigger width, `Command > CommandInput + CommandList`; selection commits immediately, closes the popover, and clears the search; the search also resets on ANY close (escape/outside click) so a stale filter never reopens. Three feed states inside the list: pending (spinner row), error (retry link, `role="alert"`), and `CommandEmpty` distinguishing "no match" from "no options at all". The trigger shows `Label (Secondary)` for the selection; option rows show label + mono secondary + trailing check. Future pickers (Select a citizen, driver picker) use this component — do not re-implement the dropdown.
 
 ### AuthSplitScreen
 

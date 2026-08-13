@@ -30,8 +30,12 @@ export class Person {
   @Column({ name: 'DateOfBirth', type: 'date' })
   dateOfBirth: string;
 
-  @Column({ name: 'PhotoUrl', nullable: true })
-  photoUrl?: string;
+  // Nullable column (photo upload is out of scope; the field carries an
+  // optional URL). null = explicitly no photo. Explicit varchar type:
+  // TS reflection emits `Object` for a `string | null` union, which
+  // TypeORM's metadata validator rejects at boot/migration time.
+  @Column({ name: 'PhotoUrl', type: 'varchar', nullable: true })
+  photoUrl: string | null;
 
   @Column({ name: 'Gender', type: 'enum', enum: Gender, enumName: 'gender_enum' })
   gender: Gender;
