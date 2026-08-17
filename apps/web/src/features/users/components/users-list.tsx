@@ -20,8 +20,9 @@ import { DeleteUserDialog } from "./delete-user-dialog"
 // shared DataTable fed with this feature's columns and query states.
 // Status column = ToggleSwitch + StatusPill pair (ui-registry.md) — never
 // the switch alone; the "(you)" tag marks the row belonging to the
-// currently authenticated session (informative only, no self-row guard —
-// Session 10 ARCHITECT decision).
+// currently authenticated session. That row's switch is locked (disabled)
+// so the signed-in clerk can't deactivate their own account mid-session —
+// the account must stay reachable for the current session to exist.
 
 const PAGE_SIZE = 10
 
@@ -79,6 +80,11 @@ export function UsersList() {
   const [toggleError, setToggleError] = useState<string | null>(null)
 
   const handleToggle = (user: UserDto, nextActive: boolean) => {
+    // STEP 5a: Self-row guard — the signed-in clerk's own account must
+    //         never be deactivated from here; the switch is disabled too,
+    //         but this keeps the mutation unreachable even if the UI
+    //         somehow fires.
+    if (user.username === currentUsername) return
     if (togglingId !== null) return
     setToggleError(null)
     setTogglingId(user.id)
@@ -127,7 +133,7 @@ export function UsersList() {
         <div className="flex items-center gap-2.5">
           <Switch
             checked={user.isActive}
-            disabled={togglingId === user.id}
+            disabled={togglingId === user.id || user.username === currentUsername}
             aria-label={`${user.isActive ? "Deactivate" : "Activate"} account ${user.username}`}
             onCheckedChange={(checked) => handleToggle(user, checked)}
           />

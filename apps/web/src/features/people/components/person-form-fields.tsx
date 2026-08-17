@@ -90,8 +90,13 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
       </div>
 
       {/* STEP 3: Row 3 — Date of Birth / Gender. DOB is a native date
-               input whose browser calendar indicator is hidden so the
-               layout shows exactly ONE calendar icon (our own, right). */}
+               input whose calendar indicator is hidden so the layout
+               shows exactly ONE calendar icon (our own, right). The
+               hidden indicator is stretched across the whole field
+               (absolute inset-0) so a click ANYWHERE on the input opens
+               the browser calendar in Chromium; the showPicker() call
+               covers Firefox/Safari, which otherwise never open the
+               picker from the field body. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -99,9 +104,10 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
             <Input
               id="dateOfBirth"
               type="date"
-              className="h-10 cursor-pointer pr-9 [&::-webkit-calendar-picker-indicator]:opacity-0"
+              className="h-10 cursor-pointer pr-9 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-auto [&::-webkit-calendar-picker-indicator]:w-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
               aria-invalid={!!errors.dateOfBirth}
               {...register("dateOfBirth")}
+              onClick={(event) => event.currentTarget.showPicker?.()}
             />
             <CalendarIcon
               aria-hidden="true"

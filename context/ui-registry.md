@@ -7,7 +7,7 @@ with the tokens in `ui-tokens.md`.
 
 | Component | Built on | Used in | Notes |
 |---|---|---|---|
-| `AppShell` | — (layout) | every authenticated page | Fixed dark sidebar (`bg-sidebar`, 264px bar → 64px icon rail when collapsed via `useUiStore`) + white topbar + light content area (`bg-background`, `max-w-screen-2xl`). Below `md` the sidebar becomes a `Sheet` off-canvas drawer. Sidebar groups: OVERVIEW, REGISTRY, APPLICATIONS HUB, OPERATIONS, each a small uppercase `text-sidebar-foreground/60` label. |
+| `AppShell` | — (layout) | every authenticated page | Fixed dark sidebar (`bg-sidebar`, 288px bar → 64px icon rail when collapsed via `useUiStore`) + white topbar + light content area (`bg-background`, `max-w-screen-2xl`). Below `md` the sidebar becomes a `Sheet` off-canvas drawer. Sidebar groups: OVERVIEW, REGISTRY, APPLICATIONS HUB, OPERATIONS, each a small uppercase `text-sidebar-foreground/60` label. |
 | `SidebarNavItem` | `Button` (ghost variant) | `AppShell` | Icon (lucide-react) + label. Active state: filled `bg-primary text-primary-foreground` rounded pill, matching the "Dashboard"/"People Management" active rows in the screenshots. Inactive: `text-sidebar-foreground`, hover `bg-sidebar-accent`. |
 | `TopBar` | `Input`, `Avatar` | `AppShell` | Left: quick-search input with search icon, placeholder `"Quick search: national ID, license, driver..."`. Right: bell icon, `Avatar` (initials, e.g. "AM"), username text. |
 | `PageHeader` | — | every list/detail page | `h1` title + one-line muted description below it. Primary action button (if any) is right-aligned on the same row (`+ Add Person`, `+ Create User`, `+ New Application`, `New International License`). |

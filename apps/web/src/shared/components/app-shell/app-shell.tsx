@@ -9,7 +9,7 @@ import { TopBar } from "./top-bar"
 
 // AppShell (ui-registry.md § AppShell, build-plan 0.C.1) — the persistent
 // frame every protected page renders inside. Desktop (md+): fixed dark
-// sidebar (full 264px bar, or the icon rail when collapsed via
+// sidebar (full 288px bar, or the icon rail when collapsed via
 // ui.store), white TopBar, light content slot capped at max-w-screen-2xl.
 // Mobile (<md): the sidebar becomes an off-canvas Sheet drawer per
 // ui-rules.md § Layout Grid Rules — never pushing content.
@@ -25,11 +25,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh bg-background">
       {/* Desktop sidebar — sticky so it stays pinned while content
-          scrolls; width animates between full bar and icon rail. */}
+          scrolls; width animates between full bar and icon rail. 288px
+          leaves the "DVLD Licensing Department" wordmark room to render
+          on one line without truncating. */}
       <aside
         className={cn(
           "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-in-out md:flex",
-          sidebarCollapsed ? "w-16" : "w-[264px]",
+          sidebarCollapsed ? "w-16" : "w-72",
         )}
       >
         <SidebarNavigation collapsed={sidebarCollapsed} />
@@ -52,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[264px] border-r-sidebar-border bg-sidebar text-sidebar-foreground"
+          className="w-72 border-r-sidebar-border bg-sidebar text-sidebar-foreground"
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">

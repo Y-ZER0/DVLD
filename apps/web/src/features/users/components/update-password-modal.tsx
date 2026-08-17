@@ -117,7 +117,7 @@ export function UpdatePasswordModal({ user, open, onOpenChange }: UpdatePassword
             </div>
           )}
 
-          <DialogFooter className="border-t bg-background px-6 py-4">
+          <DialogFooter className="gap-3 border-t bg-background px-6 pt-5 pb-6">
             <Button
               type="button"
               variant="outline"
