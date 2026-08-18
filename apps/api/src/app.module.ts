@@ -3,8 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { LocalLicenseApplicationsModule } from './modules/local-license-applications/local-license-applications.module';
 import { LookupModule } from './modules/lookup/lookup.module';
 import { PeopleModule } from './modules/people/people.module';
+import { TestingModule } from './modules/testing/testing.module';
 import { UsersModule } from './modules/users/users.module';
 
 // Root module: loads env globally, then wires TypeORM to Supabase using the
@@ -27,6 +29,8 @@ import { UsersModule } from './modules/users/users.module';
     PeopleModule,
     UsersModule,
     LookupModule,
+    LocalLicenseApplicationsModule,
+    TestingModule,
   ],
   controllers: [AppController],
 })

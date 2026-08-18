@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "../services/user.service"
 import { usersKeys } from "../usersKeys"
-import type { CreateUserRequestDto } from "../create-user-request.dto"
+import type { CreateUserRequestDto } from "../dtos/create-user-request.dto"
 
 // useCreateUser — links an unlinked person to a new account, then
 // refreshes every users list AND the unlinked-people feed (invariant #6).

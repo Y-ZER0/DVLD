@@ -25,8 +25,16 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-tint: var(--success-tint);
+  --color-success-tint-foreground: var(--success-tint-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-tint-foreground: var(--warning-tint-foreground);
+  --color-destructive-tint: var(--destructive-tint);
+  --color-neutral-tint: var(--neutral-tint);
+  --color-neutral-tint-foreground: var(--neutral-tint-foreground);
+  --color-muted-solid: var(--muted-solid);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -74,6 +82,15 @@
   --success-foreground: #ffffff;
   --warning: #d97706;
   --warning-foreground: #ffffff;
+  /* Soft status tints (5.2 spec): tint = pale card/pill background, tint-foreground = the strong label color */
+  --success-tint: #f0fdf4;
+  --success-tint-foreground: #15803d;
+  --warning-tint: #fef3c7;
+  --warning-tint-foreground: #b45309;
+  --destructive-tint: #fee2e2;
+  --neutral-tint: #e2e8f0;
+  --neutral-tint-foreground: #475569;
+  --muted-solid: #94a3b8;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #2563eb;

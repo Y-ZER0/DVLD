@@ -20,8 +20,8 @@ with the tokens in `ui-tokens.md`.
 | `Combobox` / searchable `Select` | shadcn `Command` + `Popover` | "Link to Person" picker, "Select a citizen" picker, driver picker | Type-to-filter list, each option formatted `Name (National-Number)`. **Reusable `SearchableCombobox<T>`** in `shared/components/` — reuse it, don't re-implement. Imprint: `searchable-combobox.tsx` (Session 10). |
 | `AnnotatedSelect` | shadcn `Select` | License Class picker | Each option shows the constraint inline: `"Ordinary Driving License (Car) (Min age 18)"`. |
 | `ToggleSwitch` | shadcn `Switch` | Users active/inactive | Paired immediately with a `StatusPill` (`Active`/`Inactive`) to the right of the switch — never the switch alone. Imprint: `users-list.tsx` (Session 10). |
-| `TestPipelineStepper` | `Card` + custom row | Application detail page | Three stacked rows. Completed stage: light-green background (`bg-success/10`), green circular check icon. Current/active stage: numbered circle in `bg-warning` (orange), right-aligned `Scheduled <date>` pill + `Record Result` primary button. Locked stage: gray numbered circle, muted text, right-aligned `Locked` pill with a lock icon. |
-| `AppointmentHistoryList` | `Card` + row list | Application detail page | Reverse-chronological. Each row: `<Test Type> · <date>` left, fee + result `StatusPill` + `Locked` badge right. |
+| `TestPipelineStepper` | `Card` + custom row | Application detail page | Three stacked rows (session 5.2 — file `test-pipeline-card.tsx`). Exactly FOUR states (Session 14 contract, no Failed/Pending on stages): `Passed` — soft green card (`bg-success-tint`, `border-success/20`), green circular check, dark-green (`text-success-tint-foreground`) name + cost, soft green `Passed` pill (`bg-success/15`); `Scheduled` — white card, dark numbered circle (`bg-foreground text-primary-foreground`), amber `Scheduled <date>` pill (`bg-warning-tint text-warning-tint-foreground`) + primary `Record Result` button; `Schedule` — white card, dark numbered circle, `· N failed attempt(s)` count from history, outline `Schedule` button with calendar icon; `Locked` — muted gray card (`bg-muted`) with light gray numbered circle, muted text, gray `Locked` pill + lock icon (`bg-neutral-tint text-neutral-tint-foreground`). Buttons render disabled (with explanatory `title`) when the application is no longer New. |
+| `AppointmentHistoryList` | `Card` + row list | Application detail page | Reverse-chronological (file `appointment-history-list.tsx`). Each row: `<Test Type> · <date>` left (examiner notes muted below when present), right: fee (`text-sm tabular-nums`) + outcome pills — EXACTLY 3 render cases: Pending (`bg-warning-tint text-warning-tint-foreground`), Passed (`bg-success/15 text-success-tint-foreground`) + Locked (`bg-neutral-tint text-neutral-tint-foreground`), Failed (`bg-destructive-tint text-destructive`) + Locked. No completed-date — appointment date shown for recorded rows too (Session 14 decision). Empty state: dashed-border box with calendar icon. |
 | `TwoColumnDetailLayout` | grid | Application detail page | Left column: fixed-width summary `Card` (applicant/entity info + primary action button). Right column: flexible-width `Card` (pipeline/related records). Stacks to one column below `lg` breakpoint. |
 | `ConfirmationBanner` | inline (not a `Card`) | post-issuance state on detail pages | Light-green rounded box with a check/award icon, bold headline (`"License LIC-3 issued"`), muted subtext (`"Valid 2026-08-11 to 2036-08-11"`). Replaces the action button once the action is complete — never shown alongside a still-active action button for the same thing. |
 | `EmptyState` | — | any list with zero rows | Not directly captured in the reference screenshots, but required: centered icon + one-line message + primary action button if applicable. Build to match `DataTable` spacing. |
@@ -92,6 +92,139 @@ Last updated: 2026-08-13
 | Accent usage     | Active pill `bg-success/10 text-success`; Inactive pill `bg-destructive/10 text-destructive`; checked Switch = `bg-primary` (primitive) |
 
 **Pattern notes:** The switch and pill are ONE cell and always render together — the switch carries the action, the pill carries the state text (ui-rules.md: never color alone). Session 10 decision: NOT optimistic — the row's switch disables while that row's mutation is in flight (`togglingId` per-row pending, since a mutation hook's global `isPending` can't distinguish rows) and the pill re-reads `isActive` on invalidation. Pill classes override the Badge default via tailwind-merge (bg/text groups), matching the DeletePersonDialog destructive-badge treatment. Add any future status-pair (e.g. Detained) in the same shape with the ui-rules mapping's token.
+
+### LocalLicenseApplicationsList (4.2 DataTable usage)
+
+File: `apps/web/src/features/local-license-applications/components/local-license-applications-list.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`) |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | App No. `font-mono text-sm font-bold`; applicant name `text-sm font-bold`; cell body `text-sm` |
+| Text — secondary | national number `font-mono text-xs text-muted-foreground`; progress fraction `text-sm tabular-nums` |
+| Spacing          | progress cluster `flex items-center gap-3`; bar `h-1.5 w-24` |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | progress fill `bg-primary` / track `bg-muted`; Status pill `bg-warning/10 text-warning` (New), `bg-success/10 text-success` (Completed), `bg-destructive/10 text-destructive` (Cancelled); Manage `Button variant="outline"` `h-10 bg-card` |
+
+**Pattern notes:** First Applications-list consumer of the shared DataTable — six columns (App No., Applicant, Class, Test Progress, Status, Manage) with Manage right-aligned (`text-right` header + cell, same treatment as the Actions column). Test Progress is a PLACEHOLDER (Features 5 owns pipeline state): slim `bg-primary` track on `bg-muted`, fraction "0/3" hardcoded until 5.2. Status pill reuses the exact soft-tinted Badge classes from UserStatusCell (ui-rules § Status Color Mapping: New=warning/amber, Completed=success/green, Cancelled=destructive/red) — color + label, never alone. App No. rendered `L-{applicationId}` in mono+bold. "Open →" = outline Button with text "Open" + `ArrowRight` icon navigating via `useRouter`.
+
+### NewLocalApplicationModal (FormModal + Combobox/AnnotatedSelect)
+
+File: `apps/web/src/features/local-license-applications/components/new-local-application-modal.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-lg` (~500px spec) |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; field rows `space-y-1.5`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground`; submit spinner `LoaderCircle animate-spin`; combobox selection check `text-primary` |
+
+**Pattern notes:** Second FormModal implementation (PersonFormModal is the template — identical chrome: DialogContent `gap-0 rounded-xl p-0`, title + MUST-HAVE description line, form wrapping grid + `DialogFooter border-t bg-background px-6 pt-5 pb-6`, right-aligned `Cancel` outline + primary `h-10`). The description line carries the live fee notice: "Application fee: $X. Minimum age is enforced per license class." — X read from `/lookup/application-types` (NewDrivingLicense row via lookupKeys, never hardcoded — invariant #28). Two-field form: Applicant = `SearchableCombobox<PersonDto>` via `Controller` (feed = `useCitizenOptions`, a page-1/pageSize-1000 ride on GET /people until a dedicated options endpoint exists), License Class = `Select` with `AnnotatedSelect` labels `"{className} (Min age {minimumAllowedAge})"` from `/lookup/license-classes` — pending → trigger disabled + "Loading classes…" placeholder, error → inline `Try again` link. Zod schema `{ personId, licenseClassId }` both `int().positive()` mirroring the backend DTO; 400 underage / 404 messages surface in the standard `role="alert"` destructive box. Close icon "X" top-right from the Dialog primitive.
+
+### LocalLicenseApplicationDetailPage (TwoColumnDetailLayout first implementation)
+
+File: `apps/web/src/features/local-license-applications/local-license-application-detail-page.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-card` (both cards) |
+| Border           | header rows `border-b border-border`; card `border-border` (Card primitive) |
+| Border radius    | `rounded-xl` (Card) |
+| Text — primary   | title `text-2xl font-bold`; card title `text-lg font-semibold`; values `text-sm` |
+| Text — secondary | `filed <date>` suffix `text-lg font-medium text-muted-foreground`; `App No.` `font-mono text-lg`; field labels `text-sm text-muted-foreground`; national number `font-mono text-xs`; back link `text-sm font-medium text-muted-foreground hover:text-foreground` |
+| Spacing          | layout `gap-6 lg:grid-cols-[360px_1fr]`; card header `px-6 py-5`; content `px-6 py-5`; KV rows `space-y-4` (label/value `justify-between gap-4`); pipeline section divider `my-6 border-t border-border`; history rows `space-y-2` |
+| Hover state      | back link `hover:text-foreground`; cancel `hover:bg-destructive-tint/70` |
+| Shadow           | `shadow-sm` (Card) |
+| Accent usage     | avatar `bg-primary/10 text-primary` (soft blue initials); Status pill tints: New `bg-warning-tint text-warning-tint-foreground`, Completed `bg-success/15 text-success-tint-foreground`, Cancelled `bg-destructive-tint text-destructive`; Cancel Application `bg-destructive-tint border-destructive/30 text-destructive`; disabled Issue CTA `bg-muted-solid text-primary-foreground` |
+
+**Pattern notes:** 5.2 revision of the 4.2 shell. Page Action Header Bar: `← Back to Applications` Link (ArrowLeft, muted, `w-fit`) then H1 `Application L-{applicationId}` + inline muted `filed <date>`; Cancel Application only for New status (one-way door) as a tinted soft-red outline button. LEFT card: "Applicant" header, avatar + bold name + mono national number, `border-t` divider, then right-aligned KV rows (`<dl>` `<dt>` label / `<dd>` value — Status pill, License Class `font-semibold`, Application Fee snapshot, License Fee (on issue) read LIVE from `useLicenseClasses` — never hardcoded, invariant #28), footer CTA full-width: disabled = `bg-muted-solid` + white + "Issue License (pass all tests first)" + `title` explaining why (ui-rules disabled rule; Feature 6 wires the click), enabled = `bg-primary` "Issue License" — enabled only when every pipeline stage is Passed (invariant #22 mirror). RIGHT card: Test Pipeline header + exact spec subtitle, 3 stage rows (`TestPipelineCard`), divider, "Appointment History" h3 + rows (`AppointmentHistoryList`) — one container, two stacked sections per spec. Action affordances gated on `canAct` = status New. Loading = skeleton cards (incl. 3 skeleton stage bars); pipeline error = inline retry; page error = centered retry card.
+
+### TestPipelineCard (4-state pipeline stepper)
+
+File: `apps/web/src/features/local-license-applications/components/test-pipeline-card.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | Passed `bg-success-tint`; Scheduled/Schedule `bg-card`; Locked `bg-muted` |
+| Border           | Passed `border-success/20`; others `border-border`; all `rounded-lg` rows `p-4` |
+| Border radius    | `rounded-lg` rows; circles `rounded-full` (size-9) |
+| Text — primary   | stage name `text-sm font-semibold` (Passed: `text-success-tint-foreground`; Locked: `text-muted-foreground`) |
+| Text — secondary | cost/desc `text-xs text-muted-foreground`; Passed variant `text-success-tint-foreground/80`; attempt count `· N failed attempt(s)`; pills `text-xs font-medium` |
+| Spacing          | rows `space-y-3`; icon cluster `items-center gap-3`; right cluster `gap-2` |
+| Hover state      | none |
+| Shadow           | none |
+| Accent usage     | Passed circle `bg-success text-success-foreground` (CircleCheck); current circle `bg-foreground text-primary-foreground` (number); Locked circle `bg-muted-foreground/25 text-muted-foreground`; Passed pill `bg-success/15 text-success-tint-foreground`; Scheduled pill `bg-warning-tint text-warning-tint-foreground`; Locked pill `bg-neutral-tint text-neutral-tint-foreground` + Lock icon; Record Result `bg-primary h-9`; Schedule `variant="outline" h-9 bg-card` + Calendar icon |
+
+**Pattern notes:** Render-only (server-computed states, invariant #9). EXACTLY 4 states (Session 14) — no Failed/Pending on stages; retake attempt count derived from `pipeline.history` (failed rows for the same testTypeId), never from the stage. Buttons disabled with explanatory `title` when `canAct` false (dead application — ui-rules disabled-state rule); Scheduled row's Record button also disables without `appointmentId`. Number badge = stage position 1..3.
+
+### AppointmentHistoryList (history rows)
+
+File: `apps/web/src/features/local-license-applications/components/appointment-history-list.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | rows `bg-card`; empty box dashed `border-border` |
+| Border           | rows `border border-border` `rounded-lg` `px-4 py-3`; empty `border-dashed` |
+| Border radius    | `rounded-lg` rows; pills `rounded-full` |
+| Text — primary   | `[Test] · [date]` `text-sm font-medium` (`truncate`); fee `text-sm tabular-nums` |
+| Text — secondary | notes `text-xs text-muted-foreground` (`truncate` + `title`); pills `text-xs font-medium` |
+| Spacing          | list `space-y-2`; row `justify-between gap-4`; pill cluster `gap-2` |
+| Hover state      | none |
+| Shadow           | none |
+| Accent usage     | Pending `bg-warning-tint text-warning-tint-foreground`; Passed `bg-success/15 text-success-tint-foreground`; Failed `bg-destructive-tint text-destructive`; Locked `bg-neutral-tint text-neutral-tint-foreground` — color + label never alone |
+
+**Pattern notes:** Three render cases only (pending / passed+locked / failed+locked; Session 14 contract). Recorded rows show the APPOINTMENT date, not a completed date (deliberate — no result-date exists). Served newest-first, rendered as-is.
+
+### ScheduleAppointmentModal
+
+File: `apps/web/src/features/local-license-applications/components/schedule-appointment-modal.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-[480px]` (~480px spec) |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground`; submit spinner `LoaderCircle animate-spin`; CalendarIcon `text-muted-foreground` right |
+
+**Pattern notes:** Fourth FormModal implementation (PersonFormModal template). Subtitle carries the LIVE booking fee for the stage's test type via `useTestTypes` (invariant #28 — never hardcoded; pending → "Booking fee: —."). Single field: native date input with the exact DOB calendar treatment (`showPicker()` fallback, stretched hidden indicator, single CalendarIcon). 409s (double-booking, predecessor gate #19, dead application) surface verbatim in the standard alert box; dialog stays open.
+
+### RecordResultModal
+
+File: `apps/web/src/features/local-license-applications/components/record-result-modal.tsx`
+Last updated: 2026-08-18
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-[480px]` (~480px spec) |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; textarea placeholder "Observations, score, remarks..."; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; textarea `min-h-24`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground`; submit spinner `LoaderCircle animate-spin` |
+
+**Pattern notes:** The description line is the EXACT lock warning from the spec — "Saving a result permanently locks this appointment. A failed test requires a new appointment." — load-bearing copy (ui-registry Do Not list) mirroring invariants #20/#21. Result = shadcn `Select` with the backend's `passed`/`failed` vocabulary; zod enum validates, RHF errors under field. Notes optional, `MaxLength(500)` mirror. Submit sends `{ appointmentId, dto }` to `useRecordTestResult(applicationId)`; 409 stay-open pattern; "Save & Lock" label only while idle (spinner "Saving…" while pending).
 
 ### Combobox (Link to Person)
 

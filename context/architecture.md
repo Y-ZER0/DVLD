@@ -138,6 +138,11 @@ Enum application_type_enum {
   ReleaseDetainedLicense
   NewInternationalLicense
 }
+Enum application_status_enum {
+  New
+  Cancelled
+  Completed
+}
 
 Table People {
   PersonID int [pk, increment]
@@ -194,7 +199,7 @@ Table Applications {
   ApplicantPersonID int [ref: > People.PersonID]
   ApplicationDate datetime
   ApplicationTypeID int [ref: > ApplicationTypes.ApplicationTypeID]
-  ApplicationStatus int [note: '1:New, 2:Cancelled, 3:Completed']
+  ApplicationStatus application_status_enum [note: 'Postgres enum, Session 12 user directive — was int 1:New/2:Cancelled/3:Completed in the original DBML']
   LastStatusDate datetime
   PaidFees decimal
   CreatedByUserID int [ref: > Users.UserID]

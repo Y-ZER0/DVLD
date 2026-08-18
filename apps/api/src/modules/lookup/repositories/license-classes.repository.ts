@@ -27,4 +27,11 @@ export class LicenseClassesRepository extends Repository<LicenseClass> {
     //         deterministically between requests.
     return this.find({ order: { id: 'ASC' } });
   }
+
+  // Single-row lookup by id — the 4.1 age gate target (a second query is
+  // wasted if we only need one class; Feature 6.1 will use it for the
+  // validity-length read too). Returns null so the caller decides 404.
+  async findById(id: number): Promise<LicenseClass | null> {
+    return this.findOneBy({ id });
+  }
 }

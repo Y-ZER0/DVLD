@@ -1,8 +1,8 @@
 import { apiClient } from "@/shared/lib/api-client"
 import type { ApiResponse, PaginatedApiResponse } from "@/shared/types/api-response"
 import type { PersonDto, UserDto } from "@repo/shared"
-import type { CreateUserRequestDto } from "../create-user-request.dto"
-import type { UpdateUserPasswordRequestDto } from "../update-user-password-request.dto"
+import type { CreateUserRequestDto } from "../dtos/create-user-request.dto"
+import type { UpdateUserPasswordRequestDto } from "../dtos/update-user-password-request.dto"
 
 // userService — the users feature's service layer (invariant #4: the ONLY
 // files allowed to touch apiClient for this feature). Pure, stateless async

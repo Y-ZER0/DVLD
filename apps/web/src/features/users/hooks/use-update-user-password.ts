@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "../services/user.service"
 import { usersKeys } from "../usersKeys"
-import type { UpdateUserPasswordRequestDto } from "../update-user-password-request.dto"
+import type { UpdateUserPasswordRequestDto } from "../dtos/update-user-password-request.dto"
 
 // useUpdateUserPassword — resets an account's password (PATCH
 // /users/:id/password). No list field displays the password, so nothing

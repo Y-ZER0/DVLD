@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ApplicationTypeDto, LicenseClassDto, TestTypeDto } from '@repo/shared';
+import {
+  ApplicationType as ApplicationTypeEnum,
+  ApplicationTypeDto,
+  LicenseClassDto,
+  TestTypeDto,
+} from '@repo/shared';
 import { ApplicationType } from './entities/application-type.entity';
 import { LicenseClass } from './entities/license-class.entity';
 import { TestType } from './entities/test-type.entity';
@@ -31,6 +36,16 @@ export class LookupService {
     );
   }
 
+  // Single class by id — the 4.1 age-gate lookup (and 6.1's
+  // validity-length read): precise single-row fetch, no full-register scan.
+  // Returns null for a missing id; the caller maps it to a 404.
+  async findLicenseClassById(id: number): Promise<LicenseClassDto | null> {
+    // STEP 1: Read the entity, then project through the same toDto gate —
+    //         the caller never sees the raw row (invariant #11).
+    const entity = await this.licenseClassesRepository.findById(id);
+    return entity ? this.toLicenseClassDto(entity) : null;
+  }
+
   // Full application-type register — the fee source for Feature 4+ fee
   // snapshots (invariant #28) and the "fee notice" text on future modals.
   async findAllApplicationTypes(): Promise<ApplicationTypeDto[]> {
@@ -39,12 +54,32 @@ export class LookupService {
     );
   }
 
+  // Single application type by its enum label — the 4.1 fee-snapshot
+  // source (read the NewDrivingLicense row at create time, invariant #28).
+  // Returns null for a missing row; the caller decides how to surface it.
+  async findApplicationTypeByTitle(
+    title: ApplicationTypeEnum,
+  ): Promise<ApplicationTypeDto | null> {
+    const entity = await this.applicationTypesRepository.findByTitle(title);
+    return entity ? this.toApplicationTypeDto(entity) : null;
+  }
+
   // Full test-type register — powers the 5.2 stepper's fee labels and the
   // test sequencing rules (Vision → Written → Street, invariant #19).
   async findAllTestTypes(): Promise<TestTypeDto[]> {
     return (await this.testTypesRepository.findAll()).map((entity) =>
       this.toTestTypeDto(entity),
     );
+  }
+
+  // Single test type by id — the 5.1 fee-snapshot source (schedule() reads
+  // TestTypes.TestTypeFees at booking time, invariant #28) and its 404
+  // gate. Returns null for a missing id; the caller maps it to a 404.
+  async findTestTypeById(id: number): Promise<TestTypeDto | null> {
+    // STEP 1: Read the entity, then project through the same toDto gate —
+    //         the caller never sees the raw row (invariant #11).
+    const entity = await this.testTypesRepository.findById(id);
+    return entity ? this.toTestTypeDto(entity) : null;
   }
 
   // STEP-gates: flat projections, no entity leaks (invariant #11). Fee

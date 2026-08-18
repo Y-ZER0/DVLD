@@ -13,7 +13,7 @@ paired `[LOGIC]` item is checked and reviewed.
 |---|---|
 | Phase 0 — Foundation Setup | In Progress (0.A + 0.B done) |
 | Phase 1 — Foundation | In Progress (1.1 + 1.2 + 2.1 + 2.2 + 3.1 done) |
-| Phase 2 — Application Lifecycle & Testing | Not Started |
+| Phase 2 — Application Lifecycle & Testing | In Progress (4.1 + 4.2 done) |
 | Phase 3 — Advanced License Services | Not Started |
 | Phase 4 — Utilities & Reports | Not Started |
 
@@ -35,10 +35,10 @@ paired `[LOGIC]` item is checked and reviewed.
 - [x] 3.1 — Lookup Data `[LOGIC]`
 
 ### Phase 2
-- [ ] 4.1 — Local Driving License Applications `[LOGIC]`
-- [ ] 4.2 — Local Driving License Applications `[UI]`
-- [ ] 5.1 — Test Appointment & Results System `[LOGIC]`
-- [ ] 5.2 — Test Appointment & Results System `[UI]`
+- [x] 4.1 — Local Driving License Applications `[LOGIC]`
+- [x] 4.2 — Local Driving License Applications `[UI]`
+- [x] 5.1 — Test Appointment & Results System `[LOGIC]`
+- [x] 5.2 — Test Appointment & Results System `[UI]`
 - [ ] 6.1 — License Issuance `[LOGIC]`
 - [ ] 6.2 — License Issuance `[UI]`
 
@@ -91,6 +91,84 @@ needed to jump back in cold>
 **Known issues / follow-ups:** n/a
 **Start next session with:** 0.A — Monorepo, Database & Shared Package Scaffold
 ```
+
+### Session 15 — 2026-08-18
+**Completed:** **5.2 — Test Appointment & Results System `[UI]`** (full vertical slice: 5 new tokens, test-types lookup hook, pipeline query key, testing service + 2 request DTOs, 3 hooks, 4 components, detail page rebuilt to the user's descriptive prompts).
+**Decisions made:**
+- **Spec-driven detail page** (user provided exact descriptive prompts; built to match): back link + H1 `Application L-{id}` + inline muted "filed <date>"; Cancel = soft-red tint button (`bg-destructive-tint border-destructive/30 text-destructive`, New-only); LEFT card = "Applicant" header, soft-blue avatar initials, divider, right-aligned KV rows (Status pill / License Class / Application Fee snapshot / **License Fee (on issue) read live from `useLicenseClasses`** — invariant #28), footer CTA full-width with the disabled gray-blue "Issue License (pass all tests first)" (title explains why; Feature 6.2 wires the click) vs `bg-primary` "Issue License" when every stage is Passed (invariant #22 mirror); RIGHT card = one container, Test Pipeline (exact spec subtitle) + divider + Appointment History.
+- **Five new soft-status tokens added to `ui-tokens.md` + `globals.css`** (token-first rule): `success-tint` #F0FDF4 / `success-tint-foreground` #15803D, `warning-tint` #FEF3C7 / `warning-tint-foreground` #B45309, `destructive-tint` #FEE2E2, `neutral-tint` #E2E8F0 / `neutral-tint-foreground` #475569, `muted-solid` #94A3B8 — the spec's soft pill/card colorways without raw hexes in components.
+- **Actions gated on status New (`canAct`)** — dead applications render Schedule/Record buttons visibly disabled with explanatory `title` (ui-rules disabled rule; the 5.1 service 409s anyway); pipeline stages unchanged for Cancelled/Completed.
+- **Hooks: `useTestPipeline` keyed at `localLicenseApplicationKeys.pipeline(id)`** (detail-branch child — one application, one pipeline); both mutations invalidate `detail(id)` AND `pipeline(id)` on success (invariant #6). `useRecordTestResult(applicationId)` takes `{ appointmentId, dto }` payload — the appointment id rides with the action, the hook binds the invalidation target.
+- **RecordResultModal** = exact spec: ~480px (`max-w-[480px]`), title + the exact lock-warning subtitle copy, Result select over the 5.1 `passed|failed` vocabulary, notes textarea (500 max mirror), `bg-background` footer strip, Cancel + "Save & Lock".
+- **ScheduleAppointmentModal** = FormModal chrome, live fee notice per stage's test type via new `useTestTypes` (invariant #28), native date input with the person DOB calendar treatment (`showPicker()` etc.).
+- **Attempt count derived from history** (`history.filter(testTypeId && failed)`) — the retake "· N failed attempt(s)" hint on Schedule-state stages (Session 14 contract: history is the retake source).
+- **Pills**: Pending `bg-warning-tint text-warning-tint-foreground`; Passed `bg-success/15 text-success-tint-foreground`; Failed `bg-destructive-tint text-destructive`; Locked `bg-neutral-tint text-neutral-tint-foreground` — tint family consistent across stepper + history + detail Status pill (detail Status pill also re-tinted; list 4.2 pill classes left untouched).
+**Deviations from plan:** minor — `useTestTypes` hook + `lookupKeys.testTypes()` added (plan's "fee notice read live from findAllTestTypes" required them); Issue License button shipped in BOTH states per the user's prompt though Feature 6.2 formally owns it (rendered inert with comment — no fake action).
+**Known issues / follow-ups:**
+- **No API boot + no smoke** (session pattern) — `pnpm typecheck` + `pnpm build` green (route table unchanged; `/applications/local/[id]` rebuilt). Pipeline/schedule/record roundtrips + both modals unverified at runtime.
+- **5.1 + 4.1 REVIEW still owed** (AGENTS.md § 3.1), now joined by **5.2 `[UI]` REVIEW**; backlog REVIEWs (0.B.2, 0.C.1, 1.1, 4.2) carried. REVIEW first, then 6.1 per § 3.1.
+- Detail Status pill uses the new tint tokens while the 4.2 list uses the older `bg-warning/10` family — visually consistent family, flag for the 4.2 REVIEW.
+
+### Session 14 — 2026-08-18
+**Completed:** **5.1 — Test Appointment & Results System `[LOGIC]`** (full vertical slice: MCP migration, 2 entities, repository, service, controller, 2 request DTOs, LookupService + shared contracts; no UI code touched).
+**Decisions made:**
+- **Schema via Supabase MCP `create_test_tables`** (Session 11/12 precedent, user directive) — `TestAppointments` (SERIAL PK, FKs TestTypeID/LocalDrivingLicenseApplicationID/CreatedByUserID `ON DELETE NO ACTION`, `AppointmentDate timestamptz`, `PaidFees numeric(10,2)`, `IsLocked boolean NOT NULL DEFAULT false`, + index on LocalDrivingLicenseApplicationID for the pipeline reads) + `Tests` (SERIAL PK, `TestAppointmentID UNIQUE` FK, `TestResult boolean`, nullable `Notes`, CreatedByUserID). No TypeORM migration file.
+- **Application id rides the URL for scheduling** — `POST /test-appointments/:localDrivingLicenseApplicationId` with the build-plan DTO unchanged (testTypeId, appointmentDate): the client always schedules from the application detail screen, so the id is already in its URL; the plan's DTO shape stays exactly as specified.
+- **Pipeline contract (ARCHITECT, user-confirmed, refined mid-session)** — `GET /test-appointments/pipeline/:localDrivingLicenseApplicationId` returns `{ applicationId, stages[3], history[] }`. **Stages carry EXACTLY four statuses (user spec — no Failed/Pending on stages):** `Passed` (any recorded true result, forever), `Schedule` (CURRENT stage — first not-yet-passed — with no open booking; retake after a fail IS the current stage until it passes), `Scheduled` (current stage with an open unlocked booking — date + fee + Record Result button), `Locked` (every stage beyond current, grayed). Current = first non-passed stage, computed server-side (no isCurrent flag needed — the spec resolved it). **History = the 3 render cases only** (pending / passed+locked / failed+locked), newest first, each with nested result (incl. notes). No result-date column needed (user: no completed date display). Booking an already-passed stage is additionally 409 (phantom-history guard).
+- **Two guards beyond build-plan (ARCHITECT, user-confirmed):** (a) **double-scheduling 409** — one unlocked slot per stage (`findUnlockedForStage`), a second booking is a client error; (b) **New-status-only 409** — both schedule and recordResult reject on a Cancelled/Completed application (one-way-door principle, mirrors Feature 4 cancel semantics).
+- **recordResult = ONE transaction** (Tests insert + `IsLocked = true` flip, code-standards § 4) — deliberate refinement over the § 5 worked example's sequential awaits: a crash must never leave a result on an unlocked slot. The DB unique TestAppointmentID backstops the race; the catch maps 23505 → 409 (Session 6 23503 precedent).
+- **Stage order from the seeded TestTypes id order** via `LookupService.findAllTestTypes()` position index (repo comment already declared id order = staging order, invariant #19); unknown-id / out-of-sequence → 404 / drift 409, never a silent pass.
+- **`LocalLicenseApplicationsModule` now exports `LocalLicenseApplicationsService`** (Session 12's "5.1 will need the service — add then" note) — TestingModule reaches the application through it (404 + status), LookupModule for stage order + fee snapshot; never a foreign repository.
+- **`LookupService.findTestTypeById` added** (+ `TestTypesRepository.findById`) — the fee-snapshot + 404 source (findLicenseClassById precedent).
+- **No TestsRepository** — the Tests row is written via the manager inside the service transaction (Application-parent precedent, Session 12).
+- **403-free: $ route order safe** — `GET pipeline/:id` declared before the parameterized routes; no route-shape collisions.
+**Deviations from plan:** none of substance — scheduling path param (above); no TestsRepository (above); `RecordTestResultRequestDto.result` is a `'passed' | 'failed'` string union (`@IsIn`), matching the code-standards § 5 worked example, mapped to the boolean column in the service. **Mid-session contract refinement (user):** 4-exclusive stage statuses (above) replace the initial Pending/Failed model; `Tests.ResultDate` column NOT added (user: no completed date needed); extra 409 on re-booking a passed stage (phantom-history guard, above).
+**Known issues / follow-ups:**
+- **No API boot + no smoke (user directive this session)** — verified `pnpm typecheck` / `lint` / `build` green instead (nest build + next build route table unchanged). The 3 new routes, the earlier 4.1 routes, and the MCP migration are unverified at runtime.
+- **4.1 REVIEW still owed — now joined by 5.1** (AGENTS.md § 3.1; user continues to build by directive). Also still owed: 0.B.2, 0.C.1, 1.1 backlog, 4.2 itself.
+- Shared entity circular import (TestAppointment ↔ Test, standard TypeORM OneToOne inverse pattern) — expected fine, confirmed only at boot.
+**Start next session with:** **REVIEW pass on 4.1 `[LOGIC]` + 5.1 `[LOGIC]`** (invariant cross-refs: #9 single DTO, #11 toDto gates, #19 predecessor gate + order derivation, #20 locked guard + transaction atomicity, #21 retake semantics, #28 fee snapshot at booking time, #29 session user on both writes + 23505 race path, #31 no roles; step comments; controller-thin), then **5.2 — Test Appointment & Results System `[UI]`** — ARCHITECT first: `TestPipelineCard` (three-row stepper fed by `GET /test-appointments/pipeline/:id`), `ScheduleAppointmentModal` (date field + fee notice read live from `findAllTestTypes`), `RecordResultModal` (Passed/Failed select + notes + "permanently locks" warning), `AppointmentHistoryList`; hooks `useTestPipeline` / `useScheduleTestAppointment` / `useRecordTestResult` invalidating `localLicenseApplicationKeys.detail(id)`; the 4.2 detail page's placeholder right card is the plug-in point.
+
+### Session 13 — 2026-08-18
+**Completed:** **4.2 — Local Driving License Applications `[UI]`** (full vertical slice: routes, keys factory, service, 5 hooks, list DataTable, New modal, detail shell, cancel confirm).
+**Decisions made:**
+- **New `features/lookup/` on the web side (ARCHITECT call)** — the 4.2 modal needs license classes (min-age labels) + application types (fee notice) live, and no lookup hooks existed. `lookupKeys` + `lookupService` + `useLicenseClasses` / `useApplicationTypes` (5-min staleTime per library-docs § 4). Feature 11.2 reuses these; test-types method included for completeness.
+- **Citizen combobox feed = page-1/pageSize-1000 ride on `GET /people` (ARCHITECT call, UI-only constraint)** — no dedicated plain-array citizens endpoint exists (4.1 is closed; a new endpoint is LOGIC work), and the picker must type-to-filter over the FULL set (ui-registry Combobox). Housed in the applications service (cross-route precedent: `userService.getUnlinkedPeople` on `/people/unlinked`, invariant #13), keyed at `localLicenseApplicationKeys.citizenOptions()`. **Flagged follow-up:** a `/people/options`-style endpoint when the registry outgrows the window.
+- **Test Progress column = placeholder** — Feature 5 owns pipeline state; every row renders an empty `bg-primary`-on-`bg-muted` track + "0/3" with a comment marking the 5.2 replacement.
+- **Status pill mapping reused verbatim from UserStatusCell** (bg-warning/10 New, bg-success/10 Completed, bg-destructive/10 Cancelled) — ui-rules § Status Color Mapping; color + label never alone.
+- **App No. renders `L-{applicationId}`** (the generic Applications row id) in mono+bold, per the reference screenshots.
+- **Cancel Application only renders for `New` status** (detail header, top-right, outline-destructive treatment) — one-way door, so nothing to cancel otherwise; confirm via AlertDialog (409 stay-open, `Keep Application` cancel), invalidates lists + detail.
+- **Detail shell = first TwoColumnDetailLayout implementation** (360px left summary card / flexible right Test Pipeline placeholder card, stacks below `lg`); the left card is informational until Feature 6 wires the issue action (no fake button now). Loading = Skeleton cards in the same grid; error = centered retry card.
+- **`shadcn add skeleton`** — new primitive via CLI (generates untouched per code-standards).
+- **New modal = second FormModal implementation** (PersonFormModal template: `max-w-lg` per ~500px spec, title + description with the LIVE fee notice, fields grid, `bg-background` footer strip). License Class select uses `Select` (AnnotatedSelect labels) with pending/error handling; Applicant uses `SearchableCombobox` via RHF `Controller`.
+**Deviations from plan:** none of substance — hooks ship one more than build-plan listed (`useCitizenOptions`); citizen feed rides the paginated register (above); 4.1 REVIEW still owes before 5.1 per AGENTS.md § 3.1 (user directive built 4.2 anyway).
+**Known issues / follow-ups:**
+- **No live browser/API smoke** (carried pattern) — table/list/modal/detail/cancel roundtrips unverified at runtime. `pnpm typecheck` + `pnpm build` green; both routes in the build table (`/applications/local` static, `/applications/local/[id]` dynamic). The API itself was already smoke-verified booting with all 4 application routes (Session 12).
+- **REVIEWs still owed** (AGENTS.md § 3.1): 4.1 `[LOGIC]` (mandated before 5.1), plus backlog 0.B.2, 0.C.1, 1.1; and now 4.2 `[UI]` itself once 5.1 is queued.
+- Citizen-options 1000-window follow-up (above); `useLocalLicenseApplication` uses a non-null `id as number` cast guarded by `enabled` — fine for the route, noted for REVIEW.
+**Start next session with:** **REVIEW pass on 4.1 `[LOGIC]` + 4.2 `[UI]`** (invariant cross-refs: #9 single DTO, #11 toDto gate, #28 fee snapshot live-lookup reads, #29 session user, #31 no roles; step comments; controller-thin; transaction atomicity; cancel one-way door), then **5.1 — Test Appointment & Results System `[LOGIC]`**: `TestAppointment` + `Test` entities + migrations (Supabase MCP precedent), `ScheduleTestAppointmentRequestDto` (testTypeId, appointmentDate), service rejects scheduling a stage whose predecessor hasn't Passed (invariant #19), fee snapshot on `PaidFees`, `RecordTestResultRequestDto` + `recordResult()` (locked-appointment guard #20/#21, lock on write), pipeline-state endpoint for the detail page, `POST /test-appointments` + `PATCH /test-appointments/:id/result`. The 4.2 detail page's Test Pipeline placeholder card and the `useLocalLicenseApplication.detail(id)` invalidation path are the exact spots 5.2 plugs into.
+
+### Session 12 — 2026-08-18
+**Completed:** **4.1 — Local Driving License Applications `[LOGIC]`** (full vertical slice; ARCHITECT pass first, no UI code touched).
+**Decisions made:**
+- **ApplicationStatus = Postgres enum `application_status_enum` (New/Cancelled/Completed), NOT the int 1:New/2:Cancelled/3:Completed (user directive — deviation from the architecture.md DBML).** Column stores the string labels; shared `ApplicationStatus` enum values mirror them (same pattern as Gender/ApplicationType). architecture.md DBML + enum block updated; entity header documents the deviation.
+- **Schema via Supabase MCP again (Session 11 precedent, user directive)** — migration `create_application_tables` applied directly to `tvpphretcytcicjnduxg`: enum + `Applications` + `LocalDrivingLicenseApplications` (SERIAL PKs, `ON DELETE NO ACTION` FKs, unique `ApplicationID` on the child, `numeric(10,2)` PaidFees). No TypeORM migration file — creating one would replay on `migration:run` and fail.
+- **datetime columns are `timestamptz`** (entity `type: 'timestamptz'`) — unambiguous and native to TypeORM; DBML still says `datetime` (mapping documented in the entity header).
+- **Create = the codebase's first multi-table write, wrapped in ONE `dataSource.transaction`** (code-standards § 4): the `Applications` parent + `LocalDrivingLicenseApplications` child are inserted with the same manager; the child chains to the generated parent id. Reload-after-insert for the toDto projection (UsersService.create pattern).
+- **Fee snapshot (invariant #28):** reads the `NewDrivingLicense` application-type row via the new `LookupService.findApplicationTypeByTitle()` and copies its `ApplicationFees` string onto `PaidFees` at create time — never from the client, never hardcoded. Missing config row → 404 (fail loud).
+- **Age gate (library-docs.md § 2):** applicant verified against `LicenseClasses.MinimumAllowedAge` via `LookupService.findLicenseClassById()` (new single-row finders added — no full-register scan); `date-fns` added to `apps/api` (the docs' `differenceInYears` pattern — API didn't have it); `parseISO` for calendar-accurate local-midnight birthday math.
+- **Cancel = one-way door:** only `New → Cancelled`; an already-cancelled or Completed application is a 409 (never a silent no-op, never walking back a completion). `LastStatusDate` stamped on every status change (create + cancel).
+- **One flat DTO for list AND detail** (`LocalDrivingLicenseApplicationDto`, Session 9 flat-DTO precedent): `id` = LocalDrivingLicenseApplicationID (route identity Features 5/6 hang off), `applicationId` = the Applications row displayed as "App No." — both exposed.
+- **`CreatedByUserID` from `@CurrentUser().userId`** (invariant #29) — the applications module is the first consumer of the decorator outside auth.
+- **Cross-module reads only through exported services** — `PeopleService.findOne` (applicant 404) + `LookupService` (class 404, age, fee); entity relations (`ManyToOne`) mirror the User.person pattern; the module imports `PeopleModule` + `LookupModule`. `LocalLicenseApplicationsModule` exports nothing yet (5.1 will need the service — add then).
+- **Repository owns the status write** — `updateApplicationStatus()` via `this.manager.update(Application, …)` (the status column lives on the parent table; no second repository needed).
+**Deviations from plan:** as above — enum vs int (user directive); LookupService finder methods added (plan didn't name them); one DTO instead of a separate detail shape; filters are search + status only (class filter deferred — nothing in 4.2 needs it yet).
+**Known issues / follow-ups:**
+- **Endpoint round-trip smoke SKIPPED (user directive)** — verified instead: `pnpm typecheck`/`lint`/`build` all green; API boots against Supabase with all 4 new routes mapped (`GET /local-license-applications`, `POST`, `GET :id`, `PATCH :id/cancel`) + health 200. The create/list/detail/cancel happy path and the 400 age-gate / 409 cancel-guard / 404 paths are NOT live-verified — offer a smoke again next session.
+- **Windows tooling gotcha (RECOVER note):** a `node dist/main.js` spawned via `Start-Process` dies when the invoking tool-session ends — server + probe must run inside ONE shell command (first two attempts died silently between calls; not an app defect).
+- **4.1 REVIEW not yet run** — AGENTS.md § 3.1 mandates it before 4.2 `[UI]` starts. Still-owed backlog REVIEWs: 0.B.2, 0.C.1, 1.1.
+- pg deprecation warning on boot (carried); TestType descriptions provisional (carried); Roles column strategy pending Drivers (carried).
+**Start next session with:** **REVIEW pass on 4.1 `[LOGIC]`** (invariant cross-refs: #9 single DTO definition, #11 toDto gate everywhere, #28 fee snapshot at transaction time, #29 session user, #31 no roles; step comments per code-standards § 5; transaction atomicity; cancel one-way door; controller-thin), then **4.2 — Local Driving License Applications `[UI]`** — ARCHITECT first: `/applications/local` page (DataTable: App No., Applicant, Class, Test Progress x/3 placeholder, Status pill, Manage → Open), `NewLocalApplicationModal` (citizen combobox via `GET /people/unlinked`-style feed + license-class select with "(Min age N)" labels + fee notice — read live from `/lookup/application-types`, never hardcoded), `/applications/local/[id]` detail shell (left applicant summary card, right Test Pipeline placeholder), "Cancel Application" destructive action, hooks `useLocalLicenseApplications`/`useLocalLicenseApplication`/`useCreateLocalLicenseApplication`/`useCancelApplication` + `localLicenseApplicationKeys` factory.
 
 ### Session 11 — 2026-08-13
 **Completed:** 2.2 `[UI]` REVIEW (1 Important finding fixed: toggle-failure error banner), **3.1 — Lookup Data `[LOGIC]`** (full slice), ImageKit convention + web scaffolding, first live API smoke in sessions.

@@ -23,4 +23,11 @@ export class TestTypesRepository extends Repository<TestType> {
     // STEP 1: Stable id order — also the canonical test staging order.
     return this.find({ order: { id: 'ASC' } });
   }
+
+  // Single-row lookup by id — the 5.1 fee-snapshot + 404 source (schedule()
+  // reads TestTypes.TestTypeFees at booking time, invariant #28). Returns
+  // null so the caller decides the error.
+  async findById(id: number): Promise<TestType | null> {
+    return this.findOneBy({ id });
+  }
 }

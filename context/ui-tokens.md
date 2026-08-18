@@ -139,6 +139,11 @@ do not "improve" or restructure it.
 | `destructive` / `destructive-foreground` | `#dc2626` / `#ffffff` | Delete buttons, Failed/Expired/Inactive pills |
 | `success` / `success-foreground` | `#059669` / `#ffffff` | Passed/Completed/Active pills, confirmation banners |
 | `warning` / `warning-foreground` | `#d97706` / `#ffffff` | New/Scheduled/Pending pills |
+| `success-tint` / `success-tint-foreground` | `#f0fdf4` / `#15803d` | Soft green card/pill surfaces — Passed stage cards, Passed pills (5.2) |
+| `warning-tint` / `warning-tint-foreground` | `#fef3c7` / `#b45309` | Soft amber/orange surfaces — Scheduled/Pending pills (5.2) |
+| `destructive-tint` | `#fee2e2` | Soft red surfaces — Cancel Application button, Failed pills (5.2) |
+| `neutral-tint` / `neutral-tint-foreground` | `#e2e8f0` / `#475569` | Soft gray surfaces — Locked pills/badges (5.2) |
+| `muted-solid` | `#94a3b8` | Solid gray-blue fill — disabled "Issue License (pass all tests first)" CTA (5.2) |
 | `border` / `input` | `#e2e8f0` | Card/table borders, input borders |
 | `ring` | `#2563eb` | Focus outlines |
 | `sidebar` / `sidebar-foreground` | `#0f172a` / `#cbd5e1` | Sidebar background/default text |
