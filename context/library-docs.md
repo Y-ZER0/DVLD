@@ -209,27 +209,23 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
-// STEP 1: The zod schema is the only validation definition — mirrors the
-//         backend DTO rules (library-docs.md § 2) so the UI rejects
-//         malformed input before it ever hits the API (fail fast, cheap
-//         check first, same principle as invariant #25).
 const personSchema = z.object({
   nationalNumber: z.string().regex(/^N-\d{8}$/, "National Number must match N-########"),
   firstName: z.string().min(1),
   // ...
 })
 
-// STEP 2: RHF owns field state + errors; the resolver wires the schema.
-//         Submit receives the FULLY VALIDATED values — no manual checks.
 const form = useForm<PersonFormValues>({
   resolver: zodResolver(personSchema),
   defaultValues: { /* per-field defaults */ },
 })
 
-// STEP 3: Mutations stay in TanStack Query (invariant #1) — the form
-//         submits to the hook, the hook calls the service.
 form.handleSubmit((values) => useCreatePerson.mutate(values))
 ```
+
+Note: per the Comment Policy (`code-standards.md § 5`), real frontend code
+carries no comments — the schema mirrors the backend DTO rules
+(`library-docs.md § 2`) so malformed input fails fast before it hits the API.
 
 Rules:
 

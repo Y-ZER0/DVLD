@@ -1,43 +1,47 @@
-# Memory — Session 17 (6.2 License Issuance [UI])
+# Memory — Session 23 (9.2 Detain & Release System [UI])
 
 Last updated: 2026-08-19
 
 ## What was built
 
-- **6.2 `[UI]` full slice** (built per the user's exact descriptive prompts — modal spec + post-issuance applicant-card spec; no ARCHITECT/REVIEW/API smoke):
-  - New `apps/web/src/features/local-license-applications/dtos/issue-license-request.dto.ts` — `{ notes?: string }`, mirrors backend 6.1 class.
-  - `services/local-license-applications.service.ts` += `issueLicense(id, dto)` → `POST /local-license-applications/:id/issue-license`, returns `LicenseDto` (route owned by the backend licenses module, foreign prefix — testingService precedent).
-  - New `hooks/use-issue-license.ts` — bound to application id; on success invalidates `detail(id)` + `lists()` (pipeline key deliberately NOT invalidated; drivers-list invalidation deferred — no driversKeys until Feature 10).
-  - New `components/Modals/issue-license-modal.tsx` — 480px FormModal chrome; exact spec subtitle "Issue a {class} license to {name}. Fee: ${classFees}. If the applicant is not yet a driver, a driver record is created automatically." (live fee via `useLicenseClasses`, invariant #28); Notes textarea (placeholder "First time issuance.", 500 cap, default shadcn blue focus ring); footer `bg-background` strip, Cancel + Award-icon primary; 409s (pipeline #22 / dead app / active same-class #26) stay-open.
-  - `components/Left-Column/applicant-card.tsx` — footer now THREE cases: (1) `issuedLicense` state → green banner `bg-success-tint border-success/20` with bold `text-success` + Award "License LIC-N issued" (mono id) + muted "Valid {issueDate} to {expirationDate}" (raw YYYY-MM-DD); (2) status Completed without state (post-refresh) → banner minus fabricated specifics; (3) the 5.2 two-state CTA (disabled `bg-muted-solid` / enabled `bg-primary`), enabled one wired via new `onIssueLicense` prop.
-  - `local-license-application-detail-page.tsx` — `issueOpen`/`issuedLicense` state, modal wired, comments updated.
-- Docs: `ui-registry.md` += 2 imprint sections (IssueLicenseModal, ApplicantCard footer states) + ConfirmationBanner row updated; `progress-tracker.md` 6.2 checked + Session 17 entry.
+- **9.2 `[UI]` full slice** (built per the user's exact descriptive prompt + build-plan; feature 9 is now complete end to end):
+  - `apps/web/src/app/(protected)/detain-release/page.tsx` + `features/detain-release/detain-release-page.tsx` — H1 "Detain & Release" + subtitle "Violations management and license clearance.", grid `grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]` (form left / register right).
+  - `features/detain-release/`: `detainReleaseKeys.ts` (all/lists/list(params)/eligibleLicenses), `dtos/detain-license-request.dto.ts` (`{ licenseId, fineFees }` web mirror), `services/detain-release.service.ts` (getEligibleLicenses page-1/1000 window, getDetentionRegister paginated, detainLicense, releaseLicense — `POST /detain-release/:id/release` bodyless), 4 hooks (`useEligibleLicensesForDetention` 5-min staleTime, `useDetentionRegister` placeholderData, `useDetainLicense` + `useReleaseLicense` — **both invalidate register lists AND the eligible feed**).
+  - `components/detain-license-form-card.tsx` — inline form (NOT a modal, per registry): "Detain a license" card; License Select (placeholder "Select active license", option `Driver · LIC-N`, disabled + "Loading licenses…" while pending, inline Try again on feed error); Fine Fees `$`-prefixed `InputGroup` numeric input; full-width `bg-primary` "Detain license" button with `ShieldAlert`; helper text "Release collects the fine plus a $X release application fee." — X read live from `useApplicationTypes` (`ReleaseDetainedLicense`), never hardcoded.
+  - `components/detention-register-table.tsx` — shared DataTable with `header` + `showSearch={false}`: Detain `#N` (mono bold), Driver (bold name + mono NN stacked), License `LIC-N` (mono bold), Detained `[DD Mon YYYY]` en-GB (direct `new Date(iso)` parse — timestamptz, not a DATE column), Fine `$`, Total due `$` bold, Status pill, Actions (outline `Unlock` + "Release" label; disabled + title on released rows via `[&:disabled]:pointer-events-auto`).
+  - `components/Modals/release-detention-modal.tsx` — 480px FormModal chrome restating License, Driver, Fine, live release fee, **Total due**; confirm button "Confirm Release · $X"; server 409s stay open in the alert box.
+- `context/progress-tracker.md`: Session 23 log entry, 9.2 checked, Phase 3 = "In Progress (7.1 + 7.2 + 8.1 + 8.2 + 9.1 + 9.2 done)".
 
 ## Decisions made
 
-- **Issued license rides page state, not a refetch** — the modal lifts the mutation's returned `LicenseDto` via `onIssued`; banner renders from server truth. No license-by-application endpoint exists and the detail DTO carries no license fields — a second read would have been LOGIC work.
-- **Three-case footer** — Completed-without-state branch fixes a pre-existing edge: after a refresh, the old code would have re-rendered a live (doomed 409) issuance button on a Completed application.
-- **Invalidation scope** — `detail(id)` + `lists()` only; pipeline untouched; drivers (build-plan § 6.2) deferred with in-file comment.
-- Banner styling = Passed-stage precedent (`bg-success-tint` + `border-success/20`), `text-success` headline (#059669 per spec), mono `LIC-{id}` per ui-rules ID rule, raw ISO dates per registry ConfirmationBanner sample.
+- **Detain = inline form, no confirm modal** (build-plan § 9.2 "not a modal-driven flow" + ui-registry `DetainLicenseFormCard`) — the typed two-field submit is the confirmation; ui-rules' "detain a license" destructive-confirmation row is overridden by the user-approved 9.2 plan for this flow.
+- **Status = TWO pills** (register includes released rows — 9.1 audit decision): Detained soft red `bg-destructive/10 text-destructive` (prompt's "soft red pill"), Released neutral gray `bg-neutral-tint text-neutral-tint-foreground` (Inactive/Expired precedent — now a third shipped gray-pill precedent for the ui-rules sync).
+- **Release fee displayed live everywhere (invariant #28)** — helper text AND modal breakdown both read `ReleaseDetainedLicense` from `useApplicationTypes`; "Confirm Release · $X" labels the modal confirm (8.2 fee-labeled-button precedent).
+- **Mutations invalidate `lists()` + `eligibleLicenses()`** — detain removes the license from the picker; release restores it to eligibility immediately.
+- **First fee INPUT in the codebase** — zod refines mirror the backend DTO (min 0 / max 99999999.99 / 2-decimal via `Math.round(v*100)/100 === v`, safe on doubles vs `.multipleOf(0.01)`); **zod v4 syntax `error:` param** (v3's `invalid_type_error` fails tsc here).
+- **Fine Fees input = `InputGroup`** with `$` addon + `h-10` override (twMerge beats the primitive's `h-8`); `aria-invalid` on the control drives the group's destructive border.
+- **Nav item pre-existed** (`Gavel` → `/detain-release`, Operations group) — no nav-config change needed.
 
 ## Problems solved
 
-- Post-refresh completion edge: banner branch (2) shows "License issued" without fabricating id/dates — one-way door means the CTA must never re-open on a Completed application.
-- No driversKeys exist yet → drivers-list invalidation skipped with comment (Session 16 memory noted "+ drivers list later").
+- **zod v4 typecheck failure**: `z.number({ invalid_type_error })` is v3-only — swapped to `{ error: "Enter the fine amount" }` (v4 param), typecheck green.
+- **Empty vs invalid numeric input**: empty string → `undefined` (field stays untouched); non-numeric text → `valueAsNumber` NaN → zod `error` message. Avoids zod erroring on a pristine-but-empty field.
+- **Date formatting for timestamptz**: `detainDate` is a full ISO timestamp (unlike DATE columns) — formatted with `new Date(iso)` directly, not the `T00:00:00` local-midnight trick.
+- Comment policy + raw-hex greps clean across all new files (tokens only).
 
 ## Current state
 
-- **Typecheck 4/4, `pnpm build` green** (route table unchanged; `/applications/local/[id]` 8.69 kB → 9.12 kB with modal).
-- **No API boot, no smoke** (session pattern) — issuance roundtrip + all 409 paths unverified at runtime.
-- 6.2 `[UI]` complete — **Phase 2 fully done** (4.1–6.2). Next per build-plan: Phase 3 (7.x Renewal & Replacement).
+- **Feature 9 complete** (9.1 + 9.2). Phase 3 done; Phase 4 (Features 10–12) next but the REVIEW queue precedes per AGENTS.md § 3.1.
+- **`pnpm typecheck` 4/4, `pnpm build` 3/3 green** — route table adds `/detain-release` (7.76 kB static), no other route touched. **No API boot + no smoke (session pattern)** — the 4 routes, gates, live-fee reads, and invalidation graph unverified at runtime.
+- Whole repo has uncommitted work from sessions 0–23.
 
 ## Next session starts with
 
-**REVIEW pass on 6.1 `[LOGIC]`** (now has its 6.2 consumer): invariant cross-refs #9/#11/#22/#23/#26/#28/#29, step comments, transaction atomicity, manager-parameter cross-domain methods (findOrCreateByPersonId, completeInTransaction) as the new pattern to scrutinize. Then decide with the user: **7.1 — License Renewal & Replacement `[LOGIC]`** per build-plan (existingLicenseId + reason DTO, transactional renewal with 409 on open detention invariant #32, old-row deactivation #26), or clear the standing REVIEW queue first (5.1, 5.2, backlog 0.B.2/0.C.1/1.1/4.1/4.2).
+**Decide with user per AGENTS.md § 3.1:** (a) **REVIEW pass on 9.2 `[UI]` + 9.1 `[LOGIC]`** (feature-complete pair — scrutinize the first-ever bidirectional forwardRef module/provider cycle [is one-side sufficient?], the double-detain concurrency hole, #27 release-only path, #28 live fees + display-only totalDue, #29 session user, #32 guard intact, DataTable header/showSearch reuse, pill mapping, comment/hex policy) — OR (b) **10.1 — Driver & License History `[LOGIC]`** (ARCHITECT first: `DriversRepository.findAll`/`search`, `DriversService` summary + 3 history readers, `GET /drivers`, `GET /drivers/search`, `GET /drivers/:id/{summary,local-licenses,international-licenses,test-log}` per build-plan § 10.1). Also queued: the 7.1 renew/replace expiry patch.
 
 ## Open questions
 
-- Live smoke of 5.x/6.1/6.2 endpoints still owed — offer at session start (user has declined repeatedly).
-- Completed-after-refresh banner lacks license number/dates (unavailable client-side) — a license-summary field on the detail DTO (7.2 register reuse) would close it if ever wanted.
-- Roles column (1.2 deferred) partially unblocked (Drivers table exists) — still needs data-source decision (EXISTS subqueries vs frontend derivation).
-- Carried: TestType descriptions provisional; citizen-options 1000-window; pg deprecation warning on boot.
+- REVIEW queue (user's call): 9.2+9.1, then 8.1/8.2, 7.1/7.2, 6.1, 5.1, 5.2, backlog 0.B.2/0.C.1/1.1/4.1/4.2.
+- The 9.1 REVIEW should scrutinize: is the bidirectional forwardRef (module + provider) actually minimal, or would one side suffice? Double-detain concurrency hole (in-tx read only, no partial unique index; plain unique on LicenseID is wrong since a license is re-dettable after release — same deferred class as the 6.1/7.1 hole).
+- Queued 7.1 renew/replace expiry patch: (a) renewal window 409 when `expirationDate > today + 6 months`; (b) replacement preserves OLD `ExpirationDate`; (c) 409 "renew it instead" on replacing an expired license.
+- Carried: 6.1-vs-7.1 same-class concurrency hole; pg deprecation warning; Completed-after-refresh banner gap; Roles column data source; citizen-options 1000-window; TestType descriptions provisional; ui-rules.md sync for neutral-tint Expired/Inactive/Released pills (three shipped precedents now).

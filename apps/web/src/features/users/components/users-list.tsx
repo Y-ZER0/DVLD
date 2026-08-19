@@ -14,32 +14,14 @@ import { useSetUserStatus } from "../hooks/use-set-user-status"
 import { UpdatePasswordModal } from "./update-password-modal"
 import { DeleteUserDialog } from "./delete-user-dialog"
 
-// UsersList — the 2.2 system-accounts screen (ui-registry.md DataTable):
-// owns the list's search + page state, the per-row status toggle, and the
-// Update-Password / Delete dialog orchestration. The visual table is the
-// shared DataTable fed with this feature's columns and query states.
-// Status column = ToggleSwitch + StatusPill pair (ui-registry.md) — never
-// the switch alone; the "(you)" tag marks the row belonging to the
-// currently authenticated session. That row's switch is locked (disabled)
-// so the signed-in clerk can't deactivate their own account mid-session —
-// the account must stay reachable for the current session to exist.
-
 const PAGE_SIZE = 10
 
 export function UsersList() {
-  // STEP 1: Search state lives here (transient UI state, not server state
-  //         — invariant #1). The input updates instantly; the query only
-  //         runs after a 300ms pause so typing doesn't fire a request per
-  //         keystroke.
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    // STEP 2: Debounce: reset the timer on every keystroke, commit after
-    //         300ms of silence. Returning to page 1 on a new filter
-    //         matters — a result set on page 4 may not exist under the
-    //         new search.
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput.trim())
       setPage(1)
@@ -53,14 +35,9 @@ export function UsersList() {
     pageSize: PAGE_SIZE,
   })
 
-  // STEP 3: The "(you)" tag compares against the signed-in session
-  //         (Zustand selector per invariant #3 — never the whole store).
   const currentUsername = useAuthStore((state) => state.user?.username)
 
   const setUserStatus = useSetUserStatus()
-  // STEP 4: One in-flight toggle at a time — track WHICH row is pending so
-  //         only its switch disables (the mutation hook's global isPending
-  //         can't tell rows apart).
   const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const [resetUser, setResetUser] = useState<UserDto | null>(null)
@@ -70,20 +47,9 @@ export function UsersList() {
   const total = data?.meta.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  // STEP 5: The Status cell — the interactive half of the pair. Waiting
-  //         for the server (no optimistic flip, Session 10 decision): the
-  //         switch disables while this row's mutation is in flight and
-  //         the pill re-reads isActive on invalidation. A failed toggle
-  //         must say so — without an optimistic flip the switch would
-  //         silently snap back to the old value and the clerk would never
-  //         know the request failed (REVIEW 2.2 finding).
   const [toggleError, setToggleError] = useState<string | null>(null)
 
   const handleToggle = (user: UserDto, nextActive: boolean) => {
-    // STEP 5a: Self-row guard — the signed-in clerk's own account must
-    //         never be deactivated from here; the switch is disabled too,
-    //         but this keeps the mutation unreachable even if the UI
-    //         somehow fires.
     if (user.username === currentUsername) return
     if (togglingId !== null) return
     setToggleError(null)
@@ -100,10 +66,6 @@ export function UsersList() {
     )
   }
 
-  // STEP 6: Column definitions — the user-specific cell rendering handed
-  //         to the shared DataTable. Built here (not module-level) because
-  //         the Actions and Status cells close over the toggle handler and
-  //         dialog setters.
   const columns: DataTableColumn<UserDto>[] = [
     {
       header: "Username",
@@ -127,9 +89,6 @@ export function UsersList() {
     {
       header: "Status",
       cell: (user) => (
-        // STEP 7: ToggleSwitch + StatusPill pair (ui-registry.md) — color
-        //         never alone (ui-rules.md): the pill's label carries the
-        //         state, the switch carries the action.
         <div className="flex items-center gap-2.5">
           <Switch
             checked={user.isActive}
@@ -149,9 +108,6 @@ export function UsersList() {
         </div>
       ),
     },
-    // STEP 8: Actions — IconActionButton pattern (ui-registry.md): 40×40
-    //         hit target, gray Key (reset password), red Trash (delete).
-    //         Right-aligned in both header and cells.
     {
       header: "Actions",
       headerClassName: "text-right",
@@ -181,9 +137,6 @@ export function UsersList() {
     },
   ]
 
-  // STEP 9: Empty state — two variants (ui-rules.md EmptyState, never a
-  //         bare header row): a committed search that matches nothing vs.
-  //         a system with zero accounts yet.
   const emptyState = debouncedSearch ? (
     <>
       <SearchX aria-hidden="true" className="size-8 text-muted-foreground" />
@@ -204,9 +157,6 @@ export function UsersList() {
 
   return (
     <>
-      {/* STEP 10: Toggle failure banner — the wait-for-server toggle gives
-              no other feedback, so a rejected PATCH /users/:id/status must
-              explain itself here (same role="alert" box as the modals). */}
       {toggleError && (
         <div
           role="alert"

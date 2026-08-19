@@ -379,9 +379,11 @@ Table DetainedLicenses {
     result, issuance, renewal, detain, release) persists
     `CreatedByUserID`/`ReleasedByUserID` from the authenticated session
     (`@CurrentUser()`), never from the request body.
-30. The Mandatory Inline Documentation Protocol (`AGENTS.md § 3.2`,
-    `code-standards.md`) is itself an invariant of this codebase, not a style
-    suggestion. Code without step-comments fails REVIEW.
+30. The Comment Policy (`AGENTS.md § 3.2`, `code-standards.md § 5`) is itself
+    an invariant of this codebase, not a style suggestion: comments are
+    permitted **only** in backend service files (`*.service.ts`) and on
+    complex TypeORM queries in backend repository files (`*.repository.ts`).
+    Code with comments anywhere else fails REVIEW.
 31. There is no role-based access control in this system. Do not add a
     `Role` column, a `RolesGuard`, a permissions table, or any
     `@Roles(...)` decorator. Every row in `Users` has identical access.

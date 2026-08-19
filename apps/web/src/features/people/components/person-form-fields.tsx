@@ -16,13 +16,6 @@ import { Gender } from "@repo/shared"
 import { COUNTRY_OPTIONS } from "../countries"
 import type { PersonFormValues } from "./person-form-values"
 
-// PersonFormFields — the shared field grid for the Add/Edit Person modals
-// (FormModal pattern, ui-registry.md): National Number full width, First/
-// Last Name and DOB/Gender in two-column rows, Address full width,
-// Phone/Email two-column, Country full width. Owns NO form state — it just
-// binds the caller's react-hook-form instance to the inputs, so the two
-// modals (with their own schemas) render one identical grid.
-
 interface PersonFormFieldsProps {
   form: UseFormReturn<PersonFormValues>
 }
@@ -36,9 +29,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
 
   return (
     <div className="space-y-4">
-      {/* STEP 1: Row 1 — National Number, full width. The regex rule lives
-               in the schema; here we only wire id/label (ui-rules.md a11y
-               pairing) and render the resolver's error under the field. */}
       <div className="space-y-1.5">
         <Label htmlFor="nationalNumber">National Number</Label>
         <Input
@@ -55,7 +45,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
         )}
       </div>
 
-      {/* STEP 2: Row 2 — First/Last Name, two columns. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="firstName">First Name</Label>
@@ -89,14 +78,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
         </div>
       </div>
 
-      {/* STEP 3: Row 3 — Date of Birth / Gender. DOB is a native date
-               input whose calendar indicator is hidden so the layout
-               shows exactly ONE calendar icon (our own, right). The
-               hidden indicator is stretched across the whole field
-               (absolute inset-0) so a click ANYWHERE on the input opens
-               the browser calendar in Chromium; the showPicker() call
-               covers Firefox/Safari, which otherwise never open the
-               picker from the field body. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -121,11 +102,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
           )}
         </div>
         <div className="space-y-1.5">
-          {/* STEP 4: Gender is a Select — controlled state, so it binds
-                   via Controller instead of register (RHF cannot register
-                   a non-input). The enum's TS value equals the DB label.
-                   The trigger carries the id the Label's htmlFor points at
-                   (ui-rules.md htmlFor/id pairing on every control). */}
           <Label htmlFor="gender">Gender</Label>
           <Controller
             control={control}
@@ -154,7 +130,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
         </div>
       </div>
 
-      {/* STEP 5: Row 4 — Address, full width. */}
       <div className="space-y-1.5">
         <Label htmlFor="address">Address</Label>
         <Input
@@ -171,7 +146,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
         )}
       </div>
 
-      {/* STEP 6: Row 5 — Phone / Email, two columns. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="phone">Phone</Label>
@@ -206,8 +180,6 @@ export function PersonFormFields({ form }: PersonFormFieldsProps) {
         </div>
       </div>
 
-      {/* STEP 7: Row 6 — Country, full width select. Same htmlFor/id
-               pairing as Gender (ui-rules.md). */}
       <div className="space-y-1.5">
         <Label htmlFor="countryName">Country</Label>
         <Controller

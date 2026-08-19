@@ -10,17 +10,8 @@ import { usePeople } from "../hooks/use-people"
 import { EditPersonModal } from "./edit-person-modal"
 import { DeletePersonDialog } from "./delete-person-dialog"
 
-// PeopleList — the 1.2 citizen-registry screen (ui-registry.md DataTable):
-// owns the list's search + page state and orchestrates the Add/Edit/Delete
-// dialogs. The visual table (filter bar, table region, footer) is the
-// shared DataTable component, fed here with this feature's column
-// definitions, empty state, and query states.
-
 const PAGE_SIZE = 10
 
-// STEP 1: Derive display values from the flat record — initials for the
-//         avatar, age from the DOB string, and the "X yrs · Male/Female"
-//         cell format from the spec.
 function getInitials(person: PersonDto): string {
   const parts = [person.firstName, person.lastName].filter(Boolean)
   return parts
@@ -32,27 +23,16 @@ function getInitials(person: PersonDto): string {
 function getAge(dateOfBirth: string): number {
   const dob = new Date(dateOfBirth)
   if (Number.isNaN(dob.getTime())) return 0
-  // STEP 1a: Whole-year age — floor the fractional years between DOB and
-  //          today; 365.25 accounts for leap years well enough for a
-  //          registry display.
   const millis = Date.now() - dob.getTime()
   return Math.floor(millis / (365.25 * 24 * 60 * 60 * 1000))
 }
 
 export function PeopleList() {
-  // STEP 2: Search state lives here (transient UI state, not server state
-  //         — invariant #1). The input updates instantly; the query only
-  //         runs after a 300ms pause so typing doesn't fire a request per
-  //         keystroke.
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    // STEP 3: Debounce: reset the timer on every keystroke, commit after
-    //         300ms of silence. Returning to page 1 on a new filter
-    //         matters — a result set on page 4 may not exist under the
-    //         new search.
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput.trim())
       setPage(1)
@@ -73,10 +53,6 @@ export function PeopleList() {
   const total = data?.meta.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  // STEP 4: Column definitions — the person-specific cell rendering handed
-  //         to the shared DataTable. Built here (not module-level) because
-  //         the Actions cell closes over the edit/delete setters. The
-  //         Roles column is DEFERRED — build-plan.md § 1.2.
   const columns: DataTableColumn<PersonDto>[] = [
     {
       header: "Person",
@@ -125,9 +101,6 @@ export function PeopleList() {
         </div>
       ),
     },
-    // STEP 5: Actions — IconActionButton pattern (ui-registry.md): 40×40
-    //         hit target, gray pencil edit, red trash delete. Right-aligned
-    //         in both header and cells so the cluster sits on the edge.
     {
       header: "Actions",
       headerClassName: "text-right",
@@ -157,10 +130,6 @@ export function PeopleList() {
     },
   ]
 
-  // STEP 6: Empty state — two variants (ui-rules.md EmptyState, never a
-  //         bare header row): a committed search that matches nothing vs.
-  //         a registry with zero rows yet. Which variant is live depends
-  //         on the debounced search, not the live input.
   const emptyState = debouncedSearch ? (
     <>
       <SearchX aria-hidden="true" className="size-8 text-muted-foreground" />
@@ -179,10 +148,6 @@ export function PeopleList() {
     </>
   )
 
-  // STEP 7: Dialog orchestration — Edit and Delete are driven by the row
-  //         actions above; the Add dialog is triggered by the page
-  //         header's button, so its open state is lifted to PeoplePage
-  //         (PageHeader pattern, ui-registry.md) and passed down.
   return (
     <>
       <DataTable

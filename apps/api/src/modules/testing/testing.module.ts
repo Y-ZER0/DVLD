@@ -8,15 +8,6 @@ import { TestingController } from './testing.controller';
 import { LocalLicenseApplicationsModule } from '../local-license-applications/local-license-applications.module';
 import { LookupModule } from '../lookup/lookup.module';
 
-// TestingModule — owns TestAppointments + Tests as one bounded domain
-// (build-plan.md § 5.1, architecture.md module list): the sequencing,
-// locking, and fee-snapshot rules of the test pipeline. Cross-module reads
-// go through exported services only: LocalLicenseApplicationsService for
-// the owning application (404 + status gates) and LookupService for the
-// stage order + fee snapshot — never a foreign repository
-// (architecture.md § System Boundaries). TestingService is exported:
-// Feature 6.1's license issuance re-verifies the pipeline through it
-// (invariant #22).
 @Module({
   imports: [
     TypeOrmModule.forFeature([TestAppointment, Test]),

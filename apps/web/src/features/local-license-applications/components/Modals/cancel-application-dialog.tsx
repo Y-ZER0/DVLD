@@ -16,14 +16,6 @@ import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import type { LocalDrivingLicenseApplicationDto } from "@repo/shared"
 import { useCancelApplication } from "../../hooks/use-cancel-application"
 
-// CancelApplicationDialog — confirmation step for cancelling a New
-// application (ui-rules.md: destructive actions ALWAYS confirm, never fire
-// on a single click). Names the application ("L-<App No.>") so a clerk
-// verifies what they are cancelling; cancellation is a one-way door (only
-// New → Cancelled, server-enforced — 409 on a non-New application
-// surfaces verbatim here and keeps the dialog open, the same 409
-// stay-open pattern as DeleteUserDialog).
-
 interface CancelApplicationDialogProps {
   application: LocalDrivingLicenseApplicationDto
   onOpenChange: (open: boolean) => void
@@ -36,10 +28,6 @@ export function CancelApplicationDialog({
   const cancelApplication = useCancelApplication()
   const [error, setError] = useState<string | null>(null)
 
-  // STEP 1: Submit the cancel only on explicit confirmation; a server
-  //         rejection (409: already Cancelled/Completed — the one-way
-  //         door) must explain itself and keep the dialog open rather
-  //         than silently closing.
   const handleConfirm = async () => {
     setError(null)
     try {
@@ -81,9 +69,6 @@ export function CancelApplicationDialog({
             className="h-10 bg-destructive text-destructive-foreground hover:bg-destructive/80"
             disabled={cancelApplication.isPending}
             onClick={(e) => {
-              // STEP 2: AlertDialogAction closes on click by default — we
-              //         must prevent that so the dialog stays open when the
-              //         server rejects (409) and only closes on success.
               e.preventDefault()
               void handleConfirm()
             }}

@@ -1,8 +1,3 @@
-// Country options for the Person form's Country select — a curated
-// registry-facing list (the backend stores a free-text CountryName, so any
-// legacy value not listed here still displays via the Select trigger).
-// Sorted alphabetically; "United States" is the Add form's default.
-
 export const COUNTRY_OPTIONS = [
   "Australia",
   "Austria",

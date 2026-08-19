@@ -14,16 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-// DataTable — the shared list-screen pattern (ui-registry.md DataTable),
-// used by every list feature (People, Users, Applications, Drivers):
-// filter input directly above the table, the row grid with the Actions
-// column right-aligned, and a footer with "N records · Page X of Y" left
-// and Prev/Next right. Four mutually exclusive body states — error retry,
-// loading skeletons, empty state, rows — so empty never renders as a bare
-// header row (ui-rules.md EmptyState). Strictly presentational: search and
-// page state live in the feature component and come in as props, because
-// the debounce and page-reset-on-filter rules are feature concerns.
-
 export interface DataTableColumn<T> {
   header: ReactNode
   cell: (row: T) => ReactNode
@@ -49,6 +39,8 @@ interface DataTableProps<T> {
   totalPages: number
   onPageChange: (page: number) => void
   skeletonRows?: number
+  header?: ReactNode
+  showSearch?: boolean
 }
 
 export function DataTable<T>({
@@ -69,40 +61,31 @@ export function DataTable<T>({
   totalPages,
   onPageChange,
   skeletonRows = 5,
+  header,
+  showSearch = true,
 }: DataTableProps<T>) {
-  // STEP 1: Filter bar — search input full-width above the table, icon
-  //          left, per the spec. Value + onChange belong to the parent:
-  //          the list component owns the debounce so keystrokes don't
-  //          fire a request each one, and it resets the page on commit.
-  // STEP 2: Table region — header row built from the column config, then
-  //          exactly one body state: error (centered retry), pending with
-  //          no rows yet (skeleton rows mirroring the avatar/name shape),
-  //          no rows at all (feature-provided EmptyState), else the row
-  //          grid. colSpan spans every column so a state never paints a
-  //          ragged table.
-  // STEP 3: Footer — record count + page indicator left, Prev/Next right.
-  //          Both buttons always render, disabled at the edges
-  //          (ui-rules.md), never hidden so the user can't lose the
-  //          pagination shape.
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="border-b border-border p-4">
-        <div className="relative max-w-md">
-          <Search
-            aria-hidden="true"
-            className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="search"
-            className="h-10 pl-9"
-            placeholder={searchPlaceholder}
-            aria-label={searchLabel}
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+      {header && <div className="border-b border-border px-4 pt-4 pb-3">{header}</div>}
+      {showSearch && (
+        <div className="border-b border-border p-4">
+          <div className="relative max-w-md">
+            <Search
+              aria-hidden="true"
+              className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              type="search"
+              className="h-10 pl-9"
+              placeholder={searchPlaceholder}
+              aria-label={searchLabel}
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto">
         <Table>

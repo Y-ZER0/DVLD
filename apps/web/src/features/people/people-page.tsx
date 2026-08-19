@@ -6,16 +6,7 @@ import { Button } from "@/components/ui/button"
 import { AddPersonModal } from "./components/add-person-modal"
 import { PeopleList } from "./components/people-list"
 
-// PeoplePage — the 1.2 "People Management" screen composition (invariant
-// #12: the page route stays thin; this client component owns the page
-// chrome). PageHeader pattern (ui-registry.md): h1 title + muted subtitle
-// + right-aligned primary action. The Add modal's open state lives here
-// because its trigger — the header button — is page chrome, while PeopleList
-// owns the search/pagination/dialogs beneath.
-
 export function PeoplePage() {
-  // STEP 1: Lifted state — the "Add Person" button and the (closing)
-  //         modal must share one open flag.
   const [addOpen, setAddOpen] = useState(false)
 
   return (

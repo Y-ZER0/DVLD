@@ -17,21 +17,16 @@ import {
   type LocalDrivingLicenseApplicationDto,
 } from "@repo/shared"
 
-// Status pill token mapping, same as the register list (ui-rules.md).
 const STATUS_PILL_CLASSES: Record<ApplicationStatus, string> = {
   [ApplicationStatus.NEW]: "bg-warning-tint text-warning-tint-foreground",
   [ApplicationStatus.COMPLETED]: "bg-success/15 text-success-tint-foreground",
   [ApplicationStatus.CANCELLED]: "bg-destructive-tint text-destructive",
 }
 
-// Display helper — the fee arrives as a decimal string ("15.00"),
-// display-only client-side (invariant #28).
 function formatFee(paidFees: string): string {
   return `$${paidFees}`
 }
 
-// Avatar initials — first letters of the first two name words, the TopBar
-// convention (e.g. "Marcus Reid" → "MR").
 function initialsOf(fullName: string): string {
   return fullName
     .split(" ")
@@ -41,14 +36,6 @@ function initialsOf(fullName: string): string {
     .join("")
 }
 
-// ApplicantCard — the LEFT column of the application detail page's two-
-// column grid: profile block (avatar + name + national ID), divider, then
-// the right-aligned key-value rows (Status pill, License Class, Application
-// Fee snapshot, live License Fee), and the full-width footer whose content
-// depends on issuance state (6.2): a green post-issuance banner once a
-// license is issued (or once the application is Completed — the 6.1
-// one-way door, no second offer of the CTA), otherwise the two-state
-// Issue License CTA pinned to the card footer.
 export function ApplicantCard({
   application,
   licenseFee,
@@ -57,23 +44,9 @@ export function ApplicantCard({
   onIssueLicense,
 }: {
   application: LocalDrivingLicenseApplicationDto
-  // Live ClassFees for the application's class, read from the lookup
-  // register (invariant #28: the issuance would snapshot this at
-  // transaction time; the UI never hardcodes a fee and never recomputes
-  // it). Renders "—" until the lookup resolves.
   licenseFee: string | undefined
-  // The Issue License CTA's enabled state follows the pipeline — the
-  // disabled label explains WHY (ui-rules.md), and the all-passed gate
-  // mirrors invariant #22 (the 6.1 service re-checks the gate
-  // server-side at issuance time).
   allPassed: boolean
-  // The license the 6.2 modal returned — its presence swaps the CTA for
-  // the post-issuance banner ("License LIC-N issued — Valid <issue> to
-  // <expiry>", ui-registry ConfirmationBanner).
   issuedLicense: LicenseDto | null
-  // Opens the 6.2 issuance modal — wired only on the enabled CTA
-  // variant, so the disabled variant stays a no-op with its title
-  // explaining why.
   onIssueLicense: () => void
 }) {
   return (
@@ -124,14 +97,6 @@ export function ApplicantCard({
         </dl>
       </CardContent>
 
-      {/* Footer — full-width, three cases (6.2): a license was issued →
-          the green post-issuance banner replaces the CTA (spec § 3,
-          ui-registry ConfirmationBanner); a Completed application
-          without local license state (page refreshed after issuance) →
-          the banner without fabricated specifics — the one-way door
-          means the CTA must never be offered again; otherwise the
-          two-state CTA, its enabled variant wired to the issuance
-          modal. */}
       <CardFooter className="border-t border-border px-6 py-4">
         {issuedLicense ? (
           <div className="w-full rounded-lg border border-success/20 bg-success-tint p-4">

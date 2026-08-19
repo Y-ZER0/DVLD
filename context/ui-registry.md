@@ -53,7 +53,7 @@ Last updated: 2026-08-13
 | Shadow           | `shadow-sm` |
 | Accent usage     | avatar fallback `bg-primary/10 text-primary` (soft blue initials); delete icon `text-destructive` |
 
-**Pattern notes:** Shared component extracted from the PeopleList implementation — every future list screen (Users, Applications, Drivers) renders `<DataTable>` with its own `columns` config, states, and empty node instead of copying this layout: filter input directly above the table, `overflow-x-auto` wrap for mobile, five-ish columns with Actions right-aligned (`justify-end`, `IconActionButton` size-10 ghost), footer with count/page left + Prev/Next right (both always rendered, disabled at edges). Loading = skeleton rows; error = centered retry; empty = `EmptyState` (icon + message) — never a bare header row. Filter debounce 300ms and page reset on filter commit stay in the feature component. People-specific rows: avatar initials from first two name words (`bg-primary/10 text-primary`), age computed client-side `"X yrs · Gender"`, contact stacked phone/email with truncate + `title`.
+**Pattern notes:** Shared component extracted from the PeopleList implementation — every future list screen (Users, Applications, Drivers) renders `<DataTable>` with its own `columns` config, states, and empty node instead of copying this layout: filter input directly above the table, `overflow-x-auto` wrap for mobile, five-ish columns with Actions right-aligned (`justify-end`, `IconActionButton` size-10 ghost), footer with count/page left + Prev/Next right (both always rendered, disabled at edges). Loading = skeleton rows; error = centered retry; empty = `EmptyState` (icon + message) — never a bare header row. Filter debounce 300ms and page reset on filter commit stay in the feature component. People-specific rows: avatar initials from first two name words (`bg-primary/10 text-primary`), age computed client-side `"X yrs · Gender"`, contact stacked phone/email with truncate + `title`. **Session 19 extension:** optional `header?: ReactNode` (section-title block inside the card, `border-b px-4 pt-4 pb-3`) and `showSearch?: boolean` (default `true`; `false` hides the filter bar — used by the 7.2 license register, which is paginated without search per Session 18 decision). Both defaults keep every older consumer unchanged.
 
 ### PersonFormModal (AddPersonModal / EditPersonModal)
 
@@ -263,6 +263,85 @@ Last updated: 2026-08-19
 | Accent usage     | `Award` `text-success` (dark green icon); CTA variants unchanged from 5.2 |
 
 **Pattern notes:** THREE footer cases, not two: (1) `issuedLicense` state present → full banner "License LIC-N issued / Valid a to b"; (2) application status `Completed` WITHOUT local license state (page refreshed after a success) → banner minus fabricated specifics, so a re-issued CTA is never offered past the 6.1 one-way door; (3) otherwise the 5.2 two-state CTA (disabled `bg-muted-solid` why-label / enabled `bg-primary`), the enabled variant now wired to the issuance modal. Banner replaces the button entirely (ui-registry ConfirmationBanner rule — never alongside a live CTA).
+
+### LicenseRegisterTable (7.2 renewals register)
+
+File: `apps/web/src/features/renewals-replacements/components/license-register-table.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`); section header sits on the card surface |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | License `font-mono text-sm font-bold` (`LIC-{id}`); driver name `text-sm font-bold`; section header `text-lg font-semibold` |
+| Text — secondary | national number `font-mono text-xs text-muted-foreground`; Issued/Expires `text-sm tabular-nums` |
+| Spacing          | section header `px-4 pt-4 pb-3`; action cluster `flex items-center justify-end gap-1` |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | Active pill `bg-success/10 text-success`; Detained pill `bg-destructive/10 text-destructive`; Inactive pill `bg-neutral-tint text-neutral-tint-foreground`; action buttons `variant="outline" size="icon"` + `size-10` |
+
+**Pattern notes:** First DataTable consumer without a filter input (Session 18 decision: register is paginated, no search) — DataTable gained the optional `header` + `showSearch` props (edit above). Status = THREE pills, not two — the register includes deactivated rows for the audit trail (10.1 reuse): Active green, Detained destructive red, Inactive neutral gray (`bg-neutral-tint`, archived/locked semantics visually distinct from Detained red — deliberate deviation from ui-rules' blanket "Inactive→destructive" listing). All three action buttons (Renew `RefreshCw`, Damaged `FileWarning`, Lost `FileX`) are outline icon buttons with `aria-label`s and disable TOGETHER when the row is detained OR inactive: native `disabled` + `title` explaining why + `disabled:cursor-not-allowed [&:disabled]:pointer-events-auto` (re-enables hover so the title/cursor actually surface — the base button's `pointer-events-none` would hide the reason, violating ui-rules' "never guess why" rule). Detained title = "Release this license before renewing or replacing it" (invariant #32 mirror); inactive = "This license is no longer active." (server 409s the action anyway). Dates formatted `[DD Mon YYYY]` via en-GB `Intl.DateTimeFormat` with a local-midnight parse of the YYYY-MM-DD column. Reason labels per `IssueReason`: First Time / Renewed / Damaged / Lost. One `pendingAction { license, action }` state opens exactly one modal at a time.
+
+### RenewLicenseModal / ReplaceLicenseModal (7.2 per-action confirmations)
+
+File: `apps/web/src/features/renewals-replacements/components/Modals/renew-license-modal.tsx`, `apps/web/src/features/renewals-replacements/components/Modals/replace-license-modal.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-[480px]` (~480px spec) |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; textarea placeholders "Renewal of license." / "Replacement for damaged license." / "Replacement for lost license."; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; textarea `min-h-24`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground` + `RefreshCw` (renew) / `FileWarning` (damaged) / `FileX` (lost); submit spinner `LoaderCircle animate-spin` |
+
+**Pattern notes:** Sixth/seventh FormModal implementations (PersonFormModal template). The description line is load-bearing consequence copy per build-plan 7.2: names the license being deactivated (`LIC-{id}` in `font-medium text-foreground` mono emphasis) and BOTH fees read live from lookup — application fee matched by `ApplicationType` title via `useApplicationTypes`, license fee matched by the row's `licenseClassId` via `useLicenseClasses` (invariant #28, never hardcoded; pending → "—"). Notes textarea `MaxLength(500)` mirror; placeholder = the issue-reason copy family (6.2's "First time issuance." precedent, varied per action). One `ReplaceLicenseModal` file serves BOTH replacement reasons via a `reason: 'damaged' | 'lost'` prop + a `REPLACE_META` record (title/copy/placeholder/icon) — no duplicated modal pair. Zod schemas `{ notes? }` mirror the backend DTOs; mutations bind the license id at hook call (`useRenewLicense(license.id)` / `useReplaceLicense(license.id)`) and invalidate `renewalsReplacementKeys.lists()` on success (old row flips to Inactive, new row appears — no success banner needed, unlike 6.2). 409s (open detention #32, not-active #26) surface verbatim in the standard `role="alert"` box; dialog stays open.
+
+### InternationalLicensesTable (8.2 international register)
+
+File: `apps/web/src/features/international-licenses/components/international-licenses-table.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`) |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | License `font-mono text-sm font-bold` (`INT-{id}`); driver name `text-sm font-bold`; Based On `font-mono text-sm` (`LIC-{id}`); section header `text-lg font-semibold` |
+| Text — secondary | national number `font-mono text-xs text-muted-foreground`; section subtitle `text-sm text-muted-foreground`; Issued/Expires `text-sm tabular-nums` |
+| Spacing          | section header block `mt-0.5` between title/subtitle; card header `px-4 pt-4 pb-3` (DataTable `header` prop) |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | Active pill `bg-success/10 text-success`; **Expired pill `bg-neutral-tint text-neutral-tint-foreground`** (soft gray per 8.2 spec — same treatment as 7.2's Inactive; deliberate deviation from ui-rules' Expired→destructive listing, flagged for sync); empty state `ShieldCheck` icon |
+
+**Pattern notes:** Second DataTable consumer with `showSearch={false}` + `header` (Session 19 props, 7.2 precedent — paginated register, no filter). Six columns per spec (License, Driver, Based On, Issued, Expires, Status) — no Actions column (issuance action lives in the page header). Dates `[Mon DD, YYYY]` via en-US `Intl.DateTimeFormat` with local-midnight parse (spec format — differs from 7.2's en-GB `[DD Mon YYYY]`). **Status derived from dates, not `isActive`** — local-today YYYY-MM-DD string compare against `expirationDate` (nothing ever flips the column); Active green / Expired gray. Header block = `h2 text-lg font-semibold` + `p text-sm text-muted-foreground` subtitle ("Issued International Licenses" / "All international licenses on record, newest first." — spec copy). Empty state: `ShieldCheck` + "No international licenses issued yet" + hint that issued documents appear here. Page state: `useInternationalLicenses({ page, pageSize: 10 })` with `placeholderData` (7.2 pattern).
+
+### IssueInternationalLicenseModal (8.2 issuance modal)
+
+File: `apps/web/src/features/international-licenses/components/Modals/issue-international-license-modal.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec); verification panel `bg-success-tint` (#F0FDF4 per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border`; verification panel `border border-success/20` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-[480px]` (~480px spec); panel `rounded-lg` |
+| Text — primary   | title `text-lg font-semibold`; verification headline `text-sm font-bold text-success` (spec copy); fee amounts `text-sm font-medium tabular-nums` |
+| Text — secondary | subtitle `text-sm text-muted-foreground` (exact spec sentence); fee row labels `text-sm text-muted-foreground`; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; field rows `space-y-1.5`; panel `p-4`, badge row `gap-2`, fee rows `space-y-2` + `justify-between`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | circular check `size-5 rounded-full bg-success text-success-foreground` (CircleCheck); verify icon + headline `text-success`; primary `bg-primary text-primary-foreground`; contact submit spinner `LoaderCircle animate-spin` |
+
+**Pattern notes:** Eighth FormModal implementation (PersonFormModal template, `NewLocalApplicationModal` wiring). Subtitle = the EXACT spec sentence — "The system verifies the driver holds an active Ordinary Driving License (Class 3) before issuing." — the front-end face of invariant #24. Single field: Driver = `SearchableCombobox<InternationalEligibleDriverDto>` via RHF `Controller` (ui-registry combobox reuse — option rows "name + mono national number", trigger "Name (NN)"); feed = full 1000-window ride on `GET /drivers/eligible-for-international` (citizen-options precedent, 5-min staleTime); owner keeps only `driverId`. **Verification panel renders when `driverId` is set** (any selection is eligible ⇒ verified): circular green check + bold green "Verified: active Class 3 (Car) local license on file.", then `dl` fee rows — "Application Fee" = live `NewInternationalLicense` lookup fee (invariant #28) and "Validity" = "1 year from issue date" (fixed rule copy). Confirm button label = "Issue License · ${fee}" (— while lookup pending), `disabled` until verified (spec's disabled-when-unverified) or pending. 400/409s (ineligible driver, duplicate valid international) surface verbatim in the standard alert box; dialog stays open; on success invalidates `internationalLicensesKeys.lists()` only (eligible feed unchanged by issuance — driver keeps their Car license; register self-updates, no banner).
+
+File: `apps/web/src/shared/components/searchable-combobox.tsx` (usage example: `apps/web/src/features/users/components/create-user-account-modal.tsx`)
+Last updated: 2026-08-13
 
 ### Combobox (Link to Person)
 

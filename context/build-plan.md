@@ -131,8 +131,9 @@ solid before anything downstream is built.
       **Return to this when Features 2 (Users) and 9 (Drivers) ship** — the
       original two options: (A) add `roles`/presence info to the people
       response via EXISTS subqueries, or (B) derive client-side from the
-      new `/users` + `/drivers` endpoints. The person.dto.ts contract
-      comment still documents the derived-not-stored rule.
+      new `/users` + `/drivers` endpoints. The person DTO's field set stays
+      fixed either way — the derived-not-stored rule is a read-time concern,
+      never a stored `roles` column.
 - `AddPersonModal` / `EditPersonModal` (shadcn `Dialog`, form fields per
       screen: National Number, First/Last Name, DOB, Gender, Address, Phone,
       Email, Country)

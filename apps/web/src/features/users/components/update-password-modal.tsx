@@ -20,9 +20,6 @@ import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import type { UserDto } from "@repo/shared"
 import { useUpdateUserPassword } from "../hooks/use-update-user-password"
 
-// STEP 1: The zod schema mirrors the backend UpdateUserPasswordRequestDto
-//         (2.1): one new password, 8-72 chars, no old-password step — the
-//         clerk acts on the account holder's behalf.
 const updatePasswordSchema = z.object({
   password: z
     .string()
@@ -31,11 +28,6 @@ const updatePasswordSchema = z.object({
 })
 
 type UpdatePasswordFormValues = z.infer<typeof updatePasswordSchema>
-
-// UpdatePasswordModal — the compact "Update Password" dialog (spec 2.2,
-// FormModal pattern): maximized ~420px card, title + dynamic subtitle
-// ("Set a new password for <username>."), single New Password field, and
-// the light footer strip with Cancel / Update Password.
 
 interface UpdatePasswordModalProps {
   user: UserDto
@@ -52,9 +44,6 @@ export function UpdatePasswordModal({ user, open, onOpenChange }: UpdatePassword
   const updatePassword = useUpdateUserPassword()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // STEP 2: The modal stays mounted while closed, so values would
-  //         otherwise linger between opens — reset the password field and
-  //         drop any stale server error every time it opens.
   useEffect(() => {
     if (open) {
       form.reset()
@@ -62,11 +51,6 @@ export function UpdatePasswordModal({ user, open, onOpenChange }: UpdatePassword
     }
   }, [open, form])
 
-  // STEP 3: Submit sends only the new password; a server rejection (e.g.
-  //         404 — account deleted meanwhile) is shown inline. On success
-  //         the list needs no refresh (no displayed field changed), so no
-  //         invalidation happens here — useUpdateUserPassword keeps the
-  //         detail cache honest via its own onSuccess.
   const onSubmit = async (values: UpdatePasswordFormValues) => {
     setSubmitError(null)
     try {

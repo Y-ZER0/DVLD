@@ -20,12 +20,6 @@ import { useCreatePerson } from "../hooks/use-create-person"
 import { PersonFormFields } from "./person-form-fields"
 import type { PersonFormValues } from "./person-form-values"
 
-// STEP 1: The zod schema is the single client-side validation definition —
-//         it mirrors the backend CreatePersonRequestDto rules
-//         (library-docs.md § 2) so malformed input fails before it ever
-//         hits the API (fail fast, cheap check first, invariant #25
-//         principle). Errors render from the resolver, never from
-//         hand-written local state.
 const createPersonSchema = z.object({
   nationalNumber: z
     .string()
@@ -45,22 +39,12 @@ const createPersonSchema = z.object({
   countryName: z.string().trim().min(1, "Country is required"),
 })
 
-// AddPersonModal — the "Add New Person" registration dialog (spec 1.2):
-// white card, 12px corners, title + subtitle, the ten-field grid from
-// PersonFormFields, then a light footer strip with Cancel / Add Person.
-// Submits through useCreatePerson; the server's 409 on a duplicate
-// National Number is shown verbatim in the modal.
-
 interface AddPersonModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
-  // STEP 2: RHF owns field state + errors; the resolver wires the schema.
-  //         Add-form defaults: Female stays unset (user picks), every
-  //         other field starts empty except Gender = Male and Country =
-  //         United States (spec defaults).
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(createPersonSchema),
     defaultValues: {
@@ -79,9 +63,6 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
   const createPerson = useCreatePerson()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // STEP 3: The modal stays mounted while closed (open prop driven), so
-  //         values would otherwise linger between opens — reset to the
-  //         spec defaults every time it opens, and drop any stale error.
   useEffect(() => {
     if (open) {
       form.reset()
@@ -89,9 +70,6 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
     }
   }, [open, form])
 
-  // STEP 4: On submit, validated values map straight onto the request DTO;
-  //         a server rejection (e.g. "National number already exists", 409)
-  //         is extracted from the API envelope and shown inline.
   const onSubmit = async (values: PersonFormValues) => {
     setSubmitError(null)
     try {
@@ -114,9 +92,6 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
         </DialogHeader>
 
         <form
-          // STEP 4: FormModal pattern — description under the title, the
-          //         field grid, then the right-aligned footer bar. The
-          //         form element wraps grid + footer so Enter submits.
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-0"
         >
@@ -124,8 +99,6 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
             <PersonFormFields form={form} />
           </div>
 
-          {/* STEP 5: Server-side failure (duplicate National No., 409)
-                   surfaces in the same alert style as the sign-in form. */}
           {submitError && (
             <div
               role="alert"

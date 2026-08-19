@@ -16,58 +16,25 @@ import { RecordResultModal } from "./components/Modals/record-result-modal"
 import { ScheduleAppointmentModal } from "./components/Modals/schedule-appointment-modal"
 import { TestPipelineSectionCard } from "./components/Right-Column/test-pipeline-section-card"
 
-// LocalLicenseApplicationDetailPage — the 5.2 application detail page
-// (descriptive-prompt spec, replacing the 4.2 shell): back link + header
-// bar with the tinted Cancel action, ~1/3-2/3 two-column grid — LEFT the
-// ApplicantCard (avatar block, key-value metadata rows, full-width
-// Issue License CTA whose enabled/disabled states follow the pipeline —
-// wired in 6.2 to the issuance modal, after which a green
-// post-issuance banner replaces the CTA), RIGHT the TestPipelineSectionCard
-// (Test Pipeline stepper + Appointment History stacked vertically).
-// Action affordances (Schedule / Record Result / new bookings) are gated
-// on the application status remaining New — the 5.1 service 409s every
-// test write on a Cancelled/Completed application (one-way door
-// precedent), so the UI renders them visibly disabled instead of firing
-// doomed requests.
-
-// STEP 1: Display formatting helper — dates are ISO strings rendered in
-//         the user's locale.
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
 export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
-  // STEP 3: Two independent queries feed this screen — the application
-  //         summary (status, fees, applicant) and the 5.1 pipeline
-  //         (stages + history). The schedule/record mutations invalidate
-  //         BOTH keys, so the modal-driven state transitions re-derive
-  //         from server truth (invariant #6).
   const { data: application, isPending, isError, refetch } = useLocalLicenseApplication(id)
   const pipelineQuery = useTestPipeline(id)
 
-  // STEP 4: Modal orchestration — the stage being acted on rides in
-  //         state so the right modal opens for the right stage; the
-  //         issuance flow adds its own open flag + the issued license
-  //         lifted from the mutation response (the banner on the
-  //         ApplicantCard renders from it — server truth, no refetch).
   const [cancelOpen, setCancelOpen] = useState(false)
   const [scheduleStage, setScheduleStage] = useState<TestStageDto | null>(null)
   const [recordStage, setRecordStage] = useState<TestStageDto | null>(null)
   const [issueOpen, setIssueOpen] = useState(false)
   const [issuedLicense, setIssuedLicense] = useState<LicenseDto | null>(null)
 
-  // STEP 5: License Fee (on issue) — the current ClassFees for the
-  //         application's class, read LIVE from the lookup register
-  //         (invariant #28: the issuance would snapshot this at
-  //         transaction time; the UI never hardcodes a fee and never
-  //         recomputes it).
   const licenseClasses = useLicenseClasses()
   const licenseFee = licenseClasses.data?.find(
     (licenseClass) => licenseClass.id === application?.licenseClassId,
   )?.classFees
 
-  // STEP 6: Loading — skeleton cards keep the two-column layout stable
-  //         while the queries resolve (no layout jump).
   if (isPending && !application) {
     return (
       <div className="flex flex-col gap-6">
@@ -85,8 +52,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
     )
   }
 
-  // STEP 7: Error state — centered retry, the established list/detail
-  //         pattern.
   if (isError || !application) {
     return (
       <div
@@ -102,10 +67,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
     )
   }
 
-  // STEP 8: The Issue License CTA's enabled state follows the pipeline —
-  //         the disabled label explains WHY (ui-rules.md), and the
-  //         all-passed gate mirrors invariant #22 (the 5.1/6.1 service
-  //         re-checks the gate server-side at issuance time).
   const allPassed =
     (pipelineQuery.data?.stages.length ?? 0) > 0 &&
     pipelineQuery.data?.stages.every((stage) => stage.status === "Passed") === true
@@ -114,9 +75,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* STEP 9: Page action header bar — back link first, then the
-               title row with the tinted Cancel action (rendered only for
-               New applications: cancellation is a one-way door). */}
       <Link
         href="/applications/local"
         className="flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -147,10 +105,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-        {/* STEP 10: LEFT — Applicant & Application Details card with the
-                 full-width footer CTA (own component so the grid stays
-                 1/3-2/3 and the CTA/banner states live with the card);
-                 the click opens the 6.2 issuance modal. */}
         <ApplicantCard
           application={application}
           licenseFee={licenseFee}
@@ -159,9 +113,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
           onIssueLicense={() => setIssueOpen(true)}
         />
 
-        {/* STEP 11: RIGHT — one white card holding the Test Pipeline
-                 stepper + Appointment History stacked vertically, with
-                 the query's pending/error states rendered inside. */}
         <TestPipelineSectionCard
           pipeline={pipelineQuery.data}
           isPending={pipelineQuery.isPending}
@@ -173,10 +124,6 @@ export function LocalLicenseApplicationDetailPage({ id }: { id: number }) {
         />
       </div>
 
-{/* STEP 12: Dialogs — cancel confirm, schedule + record modals bound
-                to the stage they were opened for, and the issuance
-                modal; closing clears the stage/open flag so a stale
-                stage can never reopen the wrong modal. */}
       {cancelOpen && (
         <CancelApplicationDialog
           application={application}

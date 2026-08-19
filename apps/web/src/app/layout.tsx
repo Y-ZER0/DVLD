@@ -5,8 +5,6 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryProvider } from "@/shared/providers/query-provider";
 
-// Document fonts: Inter for UI text, JetBrains Mono for IDs — both feed the
-// --font-sans/--font-mono tokens in ui-tokens.md via next/font/google.
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -27,13 +25,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn(inter.variable, jetbrainsMono.variable, "font-sans")}>
-      {/* TooltipProvider must sit above the whole tree — ui Tooltips portal
-          to document.body, so a provider nested inside a route layout would
-          not cover Sheet/portal'd content (app shell 0.C.1). */}
       <body>
-        {/* QueryProvider sits at the root (outside AppShell) so every
-            route — the public login and the protected shell alike — can
-            useQuery; TooltipProvider must cover portal'd content. */}
         <QueryProvider>
           <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
         </QueryProvider>

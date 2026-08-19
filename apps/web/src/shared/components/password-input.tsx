@@ -6,15 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-// PasswordInput — masked password field with a lock icon on the left and a
-// show/hide toggle on the right (ui-registry.md § PasswordInput). The mask
-// is pure presentation: toggling to "text" only changes the input type,
-// the value is never logged or exposed anywhere else. Lives in shared/
-// (not features/auth/) because the auth sign-in form AND Feature 2.2's
-// user-account modals use it — invariant #13 forbids a feature importing
-// from another feature, so cross-feature UI goes here (same precedent as
-// the AppShell components).
-
 const PasswordInput = forwardRef<
   HTMLInputElement,
   React.ComponentProps<typeof Input>
@@ -23,20 +14,13 @@ const PasswordInput = forwardRef<
 
   return (
     <div className={cn("relative", className)}>
-      {/* STEP 1: Lock icon pinned to the left edge, pointer-events-none so
-          clicks pass through to the input underneath. */}
       <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      {/* STEP 2: type="password" masks the value with dots; type="text"
-          reveals it only while the toggle is on. */}
       <Input
         ref={ref}
         type={visible ? "text" : "password"}
         className="h-10 pl-9 pr-12"
         {...props}
       />
-      {/* STEP 3: Icon-only toggle — 40x40 hit target (ui-rules.md) via
-          size-10, aria-label for screen readers, type="button" so it never
-          submits the form. */}
       <Button
         type="button"
         variant="ghost"

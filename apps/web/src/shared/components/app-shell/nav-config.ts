@@ -11,12 +11,6 @@ import {
   Users,
 } from "lucide-react"
 
-// Static navigation configuration for the app shell sidebar —
-// mirrors project-overview.md § Pages & Navigation exactly (the four
-// groups and every route), icons from ui-registry.md § Icon Set.
-// Routes for not-yet-built features 404 until their phase lands; the
-// nav itself is fixed product chrome, not feature code.
-
 export interface NavItem {
   label: string
   href: string

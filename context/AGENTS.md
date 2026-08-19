@@ -28,7 +28,7 @@ the rules that never change, and exactly when to invoke each skill.
 
 1. `project-overview.md` — what the product is, who uses it, what's in/out of scope
 2. `architecture.md` — tech stack, folder structure, schema, **invariants (never violate)**
-3. `code-standards.md` — naming, structure, and the mandatory documentation protocol
+3. `code-standards.md` — naming, structure, and the comment policy
 4. `ui-tokens.md` — the exact design tokens (colors, radius, type) — never invent your own
 5. `ui-rules.md` — layout, responsiveness, accessibility, status-color mapping
 6. `ui-registry.md` — components that already exist or are specified — reuse, don't reinvent
@@ -67,34 +67,33 @@ detain/release flows). Mixing UI and logic construction is how those rules get
 silently bypassed by a UI that "just calls the endpoint" before the endpoint's
 guard clauses actually exist.
 
-### 3.2 Mandatory Inline Documentation Protocol
+### 3.2 Comment Policy — No Comments Unless Exempt
 
-**Every time you write or start implementing a feature — i.e. every time you are
-about to write a method, handler, hook, or component that belongs to a feature —
-you must first write a step-by-step, plain-language comment explaining the logic,
-before writing the code that implements each step.**
+**Comments in code are forbidden except in two places. This replaces the old
+"Mandatory Inline Documentation Protocol" (Session 19 decision — all legacy
+comments were stripped from the codebase).**
 
-Concretely:
+The only files that may contain comments:
 
-- Above every method/function tied to a feature, write a short header comment
-  stating what the method does and why it exists.
-- Inside the method, before each logical step (not necessarily every single
-  line, but every distinct piece of reasoning), write a numbered `// STEP n:`
-  comment, then the code that performs that step directly beneath it.
-- The comment must explain *why*, not just restate the code. `// STEP 1: get the user`
-  above `const user = await find(id)` is not acceptable. `// STEP 1: load the user
-  first so we can 404 before touching anything else` is.
-- This applies to backend services/controllers/repositories and frontend
-  hooks/components alike.
-- The full specification and worked examples (NestJS + React) are in
-  `code-standards.md § Mandatory Inline Documentation Protocol`. Follow that
-  format exactly — do not improvise a different comment style.
+1. **Backend service files** — `apps/api/**/*.service.ts`. These may carry
+   short header comments per method and a few `// why` comments inside the
+   body. Keep them concise (1-2 lines), explain *why* not *what* — never a
+   `// STEP n:` ladder or a paragraph per line.
+2. **Backend repository files** — `apps/api/**/*.repository.ts`. Comments are
+   allowed **only on complex TypeORM queries** (multi-join query builders,
+   `NOT EXISTS`/subqueries, opt-in `addSelect` columns, shared count+page
+   builders). A one-line `find()`/`findOne()` never gets a comment.
 
-This is not documentation-as-afterthought. Write the step comments *before* you
-write the code they describe, in the same order you'll write the code, the same
-way you'd write pseudocode. If you can't articulate the steps in plain language
-first, you don't understand the feature well enough to implement it — go back to
-`build-plan.md`'s plain-English walkthrough for that feature, or invoke ARCHITECT.
+Everywhere else — controllers, entities, DTOs, migrations, guards, decorators,
+frontend hooks/services/components, `packages/shared`, CSS — **zero comments**.
+Name things well instead; the code is its own documentation.
+
+A comment that slips in must be removed, not justified — the REVIEW skill
+checks for it at the end of every sub-task.
+
+This is not a documentation-as-afterthought policy anymore: think on paper
+(ARCHITECT plan, `build-plan.md` walkthroughs) instead of in-code, and let the
+REVIEW skill verify the invariants the old comments used to spell out.
 
 ---
 
@@ -122,8 +121,9 @@ after its paired `[UI]` sub-task is complete.
 **Action:** Cross-reference the implementation against the ARCHITECT plan, the
 relevant invariants, and `code-standards.md`. Explicitly check: did every
 mutating endpoint persist `CreatedByUserID`/`ReleasedByUserID` from the session
-and not the request body? Did every method get its step-comment documentation?
-Is UI/logic separation intact?
+and not the request body? Did the diff introduce any comment outside the two
+exempt file types (`*.service.ts`, `*.repository.ts` under `apps/api`)? Is
+UI/logic separation intact?
 
 ### RECOVER
 **Trigger:** On any runtime error, build failure, or terminal exception.

@@ -1,6 +1,3 @@
-// Response-shape contracts (*Dto interfaces) for every feature. Populated by
-// each feature's [LOGIC] sub-task — do not pre-declare contracts for features
-// that don't exist yet.
 export * from './auth.dto';
 export * from './person.dto';
 export * from './user.dto';
@@ -10,3 +7,8 @@ export * from './application.dto';
 export * from './test-type.dto';
 export * from './test-appointment.dto';
 export * from './license.dto';
+export * from './license-register-row.dto';
+export * from './international-license.dto';
+export * from './international-eligible-driver.dto';
+export * from './detention-register-row.dto';
+export * from './eligible-license-for-detention.dto';

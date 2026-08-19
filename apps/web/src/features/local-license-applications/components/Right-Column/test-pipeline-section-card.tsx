@@ -14,14 +14,6 @@ import type { TestPipelineDto, TestStageDto } from "@repo/shared"
 import { AppointmentHistoryList } from "../appointment-history-list"
 import { TestPipelineCard } from "./test-pipeline-card"
 
-// TestPipelineSectionCard — the RIGHT column of the application detail
-// page's two-column grid: one white card with the two stacked sections —
-// Test Pipeline (title + the spec's exact subtitle, then the 3 stage cards
-// fed by the pipeline query) and, below a divider, Appointment History
-// (title + rows). The query lifecycle is the parent's: this component
-// receives the resolved data plus the pending/error flags, so a pending
-// query renders skeleton stage bars and an error renders an inline retry
-// instead of a broken stepper.
 export function TestPipelineSectionCard({
   pipeline,
   isPending,
@@ -35,8 +27,6 @@ export function TestPipelineSectionCard({
   isPending: boolean
   isError: boolean
   onRetry: () => void
-  // False for a Cancelled/Completed application — every test write 409s
-  // on a dead application (see TestPipelineCard).
   canAct: boolean
   onSchedule: (stage: TestStageDto) => void
   onRecordResult: (stage: TestStageDto) => void

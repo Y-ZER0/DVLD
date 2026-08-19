@@ -21,10 +21,6 @@ import { useUpdatePerson } from "../hooks/use-update-person"
 import { PersonFormFields } from "./person-form-fields"
 import type { PersonFormValues } from "./person-form-values"
 
-// STEP 1: Update schema — mirrors the backend UpdatePersonRequestDto's
-//         field rules. Every field is required HERE because the Edit form
-//         always carries the full record (pre-populated, all-or-nothing);
-//         the backend still treats a sparse body as a valid partial PATCH.
 const updatePersonSchema = z.object({
   nationalNumber: z
     .string()
@@ -44,13 +40,6 @@ const updatePersonSchema = z.object({
   countryName: z.string().trim().min(1, "Country is required"),
 })
 
-// EditPersonModal — the "Edit Person" dialog (spec 1.2): same card
-// structure as Add, with every field pre-populated from the row the table
-// already fetched. Seeds the form instantly from the row, then refetches
-// the record server-side in the background for freshness. Saves via
-// useUpdatePerson; the server's errors (e.g. 409 duplicate National No.)
-// are shown inline.
-
 interface EditPersonModalProps {
   person: PersonDto
   open: boolean
@@ -58,14 +47,8 @@ interface EditPersonModalProps {
 }
 
 export function EditPersonModal({ person, open, onOpenChange }: EditPersonModalProps) {
-  // STEP 2: Seed the detail cache with the row we already have so the
-  //         dialog opens pre-populated with zero loading state; the query
-  //         still runs in the background for server freshness.
   const { data: personData } = usePerson(person.id, person)
 
-  // STEP 3: defaultValues are read ONCE at mount — the modal remounts per
-  //         row (it is conditionally rendered), so values always belong to
-  //         the person it was opened for.
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(updatePersonSchema),
     defaultValues: {
@@ -84,9 +67,6 @@ export function EditPersonModal({ person, open, onOpenChange }: EditPersonModalP
   const updatePerson = useUpdatePerson()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // STEP 4: Submit the full form as a PATCH; a rejection (e.g. the 409
-  //         self-exempt duplicate check tripping on a stale value) is
-  //         extracted from the API envelope and shown inline.
   const onSubmit = async (values: PersonFormValues) => {
     setSubmitError(null)
     try {

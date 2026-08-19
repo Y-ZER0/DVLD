@@ -10,14 +10,10 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-// AuthModule — hosts the login flow and the app-wide authentication
-// machinery. The APP_GUARD registration makes JwtAuthGuard run on every
-// route in the app; new controllers are protected without any per-controller
-// decorator (security is opt-out via @Public(), never opt-in).
 @Module({
   imports: [
-    UsersModule, // repository + User entity (owner of record)
-    PeopleModule, // registers the Person entity for the join
+    UsersModule,
+    PeopleModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

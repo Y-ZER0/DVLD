@@ -59,14 +59,12 @@
 }
 :root {
   color-scheme: light;
-  /* Neutral slate light background with white cards */
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  /* Sapphire blue for actions */
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
@@ -75,14 +73,12 @@
   --muted-foreground: #64748b;
   --accent: #eff6ff;
   --accent-foreground: #1d4ed8;
-  /* Semantic statuses */
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --success: #059669;
   --success-foreground: #ffffff;
   --warning: #d97706;
   --warning-foreground: #ffffff;
-  /* Soft status tints (5.2 spec): tint = pale card/pill background, tint-foreground = the strong label color */
   --success-tint: #f0fdf4;
   --success-tint-foreground: #15803d;
   --warning-tint: #fef3c7;
@@ -100,7 +96,6 @@
   --chart-4: #dc2626;
   --chart-5: #64748b;
   --radius: 0.5rem;
-  /* Slate navy sidebar */
   --sidebar: #0f172a;
   --sidebar-foreground: #cbd5e1;
   --sidebar-primary: #2563eb;

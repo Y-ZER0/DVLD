@@ -23,11 +23,6 @@ import type { PersonDto } from "@repo/shared"
 import { useUnlinkedPeople } from "../hooks/use-unlinked-people"
 import { useCreateUser } from "../hooks/use-create-user"
 
-// STEP 1: The zod schema is the single client-side validation definition —
-//         it mirrors the backend CreateUserRequestDto rules (2.1) so
-//         malformed input fails before it ever hits the API (library-docs.md
-//         § 9). personId is validated as a positive int because the
-//         combobox only ever offers real person ids.
 const createUserSchema = z.object({
   personId: z
     .number({ message: "Select a person to link" })
@@ -50,22 +45,12 @@ const createUserSchema = z.object({
 
 type CreateUserFormValues = z.infer<typeof createUserSchema>
 
-// CreateUserAccountModal — the "Create User Account" dialog (spec 2.2,
-// FormModal pattern, ui-registry.md): white card, title + subtitle, then
-// the "Link to Person" searchable combobox + Username + Password fields,
-// then a light footer strip with Cancel / Create User. The combobox is the
-// shared SearchableCombobox (ui-registry Combobox pattern, Session 10
-// refactor) fed by GET /people/unlinked via useUnlinkedPeople — an option
-// is rendered "Name (National-Number)" and a person already linked to an
-// account never appears.
-
 interface CreateUserAccountModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccountModalProps) {
-  // STEP 2: RHF owns field state + errors; the resolver wires the schema.
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: { personId: undefined, username: "", password: "" },
@@ -75,10 +60,6 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
   const unlinkedPeople = useUnlinkedPeople()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // STEP 3: Modal lifecycle — reset the form and drop any stale server
-  //         error every time it (re)opens. The combobox's own open/search
-  //         state lives INSIDE SearchableCombobox now (Session 10
-  //         refactor) and resets itself on close — nothing to hold here.
   useEffect(() => {
     if (open) {
       form.reset()
@@ -86,17 +67,9 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
     }
   }, [open, form])
 
-  // STEP 4: The trigger shows the selected citizen; the form stores only
-  //         their id (the backend re-verifies existence/unlinkedness).
-  //         The option data + type-to-filter both come from
-  //         SearchableCombobox via useUnlinkedPeople — the feed stays a
-  //         full, non-paginated array (build-plan.md § 2.1).
   const selectedPerson =
     unlinkedPeople.data?.find((person) => person.id === form.watch("personId")) ?? null
 
-  // STEP 6: On submit, validated values map straight onto the request DTO;
-  //         a server rejection (409: person already linked, username taken)
-  //         is extracted from the API envelope and shown inline.
   const onSubmit = async (values: CreateUserFormValues) => {
     setSubmitError(null)
     try {
@@ -118,12 +91,6 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
           <div className="space-y-4 px-6 py-4">
-            {/* STEP 7: Link to Person — the reusable SearchableCombobox
-                     (shared/components, ui-registry Combobox). The feed
-                     hook (useUnlinkedPeople) supplies the full unlinked
-                     set; the component owns the dropdown + type-to-filter
-                     UX and reports the picked person up; the form stores
-                     only their id. */}
             <div className="space-y-1.5">
               <Label htmlFor="personId">Link to Person</Label>
               <SearchableCombobox
@@ -154,8 +121,6 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
               )}
             </div>
 
-            {/* STEP 9: Username — plain input; the regex rule mirrors the
-                     backend DTO's @Matches (2.1). */}
             <div className="space-y-1.5">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -173,8 +138,6 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
               )}
             </div>
 
-            {/* STEP 10: Password — masked via the shared PasswordInput
-                     pattern (shared/components — invariant #13). */}
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <PasswordInput
@@ -192,8 +155,6 @@ export function CreateUserAccountModal({ open, onOpenChange }: CreateUserAccount
             </div>
           </div>
 
-          {/* STEP 11: Server-side failure (409 already-linked person or
-                   taken username) surfaces in the standard alert box. */}
           {submitError && (
             <div
               role="alert"

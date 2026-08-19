@@ -75,99 +75,63 @@ convention and `fullstack-architecture-plan.md § 9`.
   TypeORM transaction (`queryRunner` or `dataSource.transaction(...)`) — never
   as two sequential `await`s that could leave the DB half-written.
 
-## 5. Mandatory Inline Documentation Protocol
+## 5. Comment Policy
 
 **This section is binding — see `AGENTS.md § 3.2` for when it applies.**
 
-Every time you implement a method, handler, hook, or component belonging to a
-feature:
+Comments are allowed in exactly two file types, and nowhere else:
 
-1. Write a one-to-two-line header comment above it stating *what it does and
-   why it exists* (not a restatement of the function signature).
-2. Inside the body, before each distinct logical step, write
-   `// STEP n: <plain-language reasoning>` and place the code implementing
-   that step directly beneath the comment.
-3. The reasoning must explain *why this step exists / why it's ordered here*,
-   referencing the relevant invariant number from `architecture.md` when the
-   step exists specifically to satisfy one.
-4. Write the comments in the order you will write the code — think of it as
-   writing the pseudocode first, then filling in each line beneath its step.
-5. If a method has no meaningful steps (a one-line getter, a trivial
-   pass-through), a single header comment is sufficient — don't manufacture
-   steps that don't exist.
+1. **Backend services** (`apps/api/**/*.service.ts`) — a short header comment
+   above each method stating *what it does and why it exists*, plus a sparse
+   `// why` line before a non-obvious step. Keep every comment to 1-2 lines;
+   no `// STEP n:` numbering ladders, no paragraphs.
+2. **Backend repositories** (`apps/api/**/*.repository.ts`) — comments only
+   on **complex TypeORM queries**: multi-join query builders (shared
+   count/page builders, always-on join sets), `NOT EXISTS`/subqueries, opt-in
+   columns via `addSelect` (e.g. the password hash), and unique-constraint
+   race backstops. Trivial one-line `find()`/`findOne()` calls get no comment.
 
-### Worked example — backend (NestJS service method)
+Forbidden anywhere else — controllers, entities, DTOs, migrations, guards,
+decorators, frontend hooks/components/services, `packages/shared`, CSS: no
+comments, period. Enforce intent with names (per § 1) instead. The REVIEW
+skill (AGENTS.md § 4) verifies this on every sub-task.
+
+### Allowed example — backend repository (complex query only)
 
 ```typescript
-// Records a Pass/Fail result against a scheduled test appointment and
-// permanently locks that appointment, per architecture.md invariants #20/#21.
-async recordTestResult(
-  appointmentId: string,
-  dto: RecordTestResultRequestDto,
-  actingUserId: string,
-): Promise<TestAppointmentDto> {
-  // STEP 1: Load the appointment first. We cannot record a result for an
-  //         appointment that doesn't exist, and we need its current
-  //         lock state before deciding whether to proceed.
-  const appointment = await this.appointmentsRepo.findById(appointmentId);
-  if (!appointment) {
-    throw new NotFoundException('Test appointment not found');
-  }
-
-  // STEP 2: Guard against double-recording (invariant #20). A locked
-  //         appointment's result is a permanent audit fact — it must
-  //         never be silently overwritten by a retried request.
-  if (appointment.isLocked) {
-    throw new ConflictException('This appointment is already locked');
-  }
-
-  // STEP 3: Persist the actual Pass/Fail row. This is what the rest of
-  //         the app reads to decide whether the pipeline can advance.
-  const test = await this.testsRepo.create({
-    testAppointmentId: appointment.id,
-    testResult: dto.result === 'passed',
-    notes: dto.notes,
-    createdByUserId: actingUserId, // session user, never dto (invariant #29)
-  });
-
-  // STEP 4: Lock the appointment. This is irreversible by design so that
-  //         nobody — including a future version of this same method —
-  //         can quietly edit history later.
-  await this.appointmentsRepo.update(appointment.id, { isLocked: true });
-
-  // STEP 5: If the applicant failed, we deliberately do nothing further
-  //         here. The pipeline does not advance, and the "Schedule"
-  //         action for this same stage will reappear on next read
-  //         because a fresh appointment (invariant #21) is required.
-  return this.toDto(appointment, test);
+// Shared builder: every read joins the stage and the recorded outcome — the
+// DTOs need them on all return paths; count and page stay in sync.
+private joinedQb() {
+  return this.repo
+    .createQueryBuilder('appt')
+    .leftJoinAndSelect('appt.testType', 'testType')
+    .leftJoinAndSelect('appt.test', 'test');
 }
 ```
 
-### Worked example — frontend (TanStack Query mutation hook)
+### Allowed example — backend service (short, why-focused)
 
 ```typescript
-// Records a test result for a given appointment and refreshes the parent
-// application's detail view once the server confirms the write.
-export function useRecordTestResult(appointmentId: string) {
-  // STEP 1: This mutates server state, so it belongs to TanStack Query —
-  //         never to a Zustand store (invariant #1).
-  const queryClient = useQueryClient();
+// Replaces the password hash; only ever called with a fresh bcrypt hash.
+async updatePassword(id: number, newHash: string) {
+  const user = await this.usersRepo.findById(id);
+  if (!user) throw new NotFoundException('User not found');
+  await this.usersRepo.updatePasswordHash(id, newHash);
+}
+```
 
+### Forbidden example — frontend (no comments anywhere)
+
+```tsx
+export function useRecordTestResult(appointmentId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
-    // STEP 2: The HTTP call itself is delegated to the service layer.
-    //         Hooks never call apiClient/axios directly (invariant #4).
     mutationFn: (dto: RecordTestResultRequestDto) =>
       testingService.recordResult(appointmentId, dto),
-
-    // STEP 3: On success, the one application detail this appointment
-    //         belongs to is now stale — its pipeline state just changed.
-    onSuccess: () => {
-      // STEP 4: Invalidate rather than manually patch, so pass/fail and
-      //         lock state always come from the server (invariant #6).
+    onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: localLicenseApplicationKeys.details(),
-      });
-    },
+      }),
   });
 }
 ```
