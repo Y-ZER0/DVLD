@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { testingService } from "../services/testing.service"
 import { localLicenseApplicationKeys } from "../localLicenseApplicationKeys"
-import type { ScheduleTestAppointmentRequestDto } from "../schedule-test-appointment-request.dto"
+import type { ScheduleTestAppointmentRequestDto } from "../dtos/schedule-test-appointment-request.dto"
 
 // useScheduleTestAppointment — books a slot for one stage of an
 // application (POST /test-appointments/:id, 5.1). On success the stage's

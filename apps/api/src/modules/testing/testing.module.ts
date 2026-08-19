@@ -14,7 +14,9 @@ import { LookupModule } from '../lookup/lookup.module';
 // go through exported services only: LocalLicenseApplicationsService for
 // the owning application (404 + status gates) and LookupService for the
 // stage order + fee snapshot — never a foreign repository
-// (architecture.md § System Boundaries).
+// (architecture.md § System Boundaries). TestingService is exported:
+// Feature 6.1's license issuance re-verifies the pipeline through it
+// (invariant #22).
 @Module({
   imports: [
     TypeOrmModule.forFeature([TestAppointment, Test]),
@@ -23,5 +25,6 @@ import { LookupModule } from '../lookup/lookup.module';
   ],
   controllers: [TestingController],
   providers: [TestingService, TestAppointmentsRepository],
+  exports: [TestingService],
 })
 export class TestingModule {}

@@ -5,6 +5,6 @@
 // allows the sparse patch the endpoint supports. photoUrl is deliberately
 // absent: the UI has no photo upload yet (null would clear a photo).
 
-import type { CreatePersonRequestDto } from "./create-person-request.dto"
+import type { CreatePersonRequestDto } from "../dtos/create-person-request.dto"
 
 export type UpdatePersonRequestDto = Partial<CreatePersonRequestDto>

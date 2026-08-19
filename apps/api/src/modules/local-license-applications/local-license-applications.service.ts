@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import {
   ApplicationStatus,
   ApplicationType,
@@ -198,5 +198,27 @@ export class LocalLicenseApplicationsService {
     //         Cancelled row as its response.
     const updated = await this.appsRepo.findById(id);
     return this.toDto(updated!);
+  }
+
+  // Marks an application Completed inside the caller's transaction —
+  // license issuance's final step (Feature 6.1). The manager is passed in
+  // deliberately (same pattern as DriversService.findOrCreateByPersonId):
+  // the completion must be ATOMIC with the Licenses insert (a license
+  // existing while its application still reads New would be a corrupted
+  // lifecycle state), so the write runs on the caller's transaction, never
+  // on a repository's own connection.
+  async completeInTransaction(
+    manager: EntityManager,
+    applicationId: number,
+    completedAt: Date,
+  ): Promise<void> {
+    // STEP 1: Flip the status and stamp LastStatusDate in one update —
+    //         mirroring the cancel() semantics: every status change
+    //         leaves an auditable timestamp.
+    await manager.update(
+      Application,
+      { id: applicationId },
+      { applicationStatus: ApplicationStatus.COMPLETED, lastStatusDate: completedAt },
+    );
   }
 }

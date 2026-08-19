@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import type { LocalDrivingLicenseApplicationDto } from "@repo/shared"
-import { useCancelApplication } from "../hooks/use-cancel-application"
+import { useCancelApplication } from "../../hooks/use-cancel-application"
 
 // CancelApplicationDialog — confirmation step for cancelling a New
 // application (ui-rules.md: destructive actions ALWAYS confirm, never fire

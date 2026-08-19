@@ -9,3 +9,4 @@ export * from './application-type.dto';
 export * from './application.dto';
 export * from './test-type.dto';
 export * from './test-appointment.dto';
+export * from './license.dto';

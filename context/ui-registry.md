@@ -23,7 +23,7 @@ with the tokens in `ui-tokens.md`.
 | `TestPipelineStepper` | `Card` + custom row | Application detail page | Three stacked rows (session 5.2 — file `test-pipeline-card.tsx`). Exactly FOUR states (Session 14 contract, no Failed/Pending on stages): `Passed` — soft green card (`bg-success-tint`, `border-success/20`), green circular check, dark-green (`text-success-tint-foreground`) name + cost, soft green `Passed` pill (`bg-success/15`); `Scheduled` — white card, dark numbered circle (`bg-foreground text-primary-foreground`), amber `Scheduled <date>` pill (`bg-warning-tint text-warning-tint-foreground`) + primary `Record Result` button; `Schedule` — white card, dark numbered circle, `· N failed attempt(s)` count from history, outline `Schedule` button with calendar icon; `Locked` — muted gray card (`bg-muted`) with light gray numbered circle, muted text, gray `Locked` pill + lock icon (`bg-neutral-tint text-neutral-tint-foreground`). Buttons render disabled (with explanatory `title`) when the application is no longer New. |
 | `AppointmentHistoryList` | `Card` + row list | Application detail page | Reverse-chronological (file `appointment-history-list.tsx`). Each row: `<Test Type> · <date>` left (examiner notes muted below when present), right: fee (`text-sm tabular-nums`) + outcome pills — EXACTLY 3 render cases: Pending (`bg-warning-tint text-warning-tint-foreground`), Passed (`bg-success/15 text-success-tint-foreground`) + Locked (`bg-neutral-tint text-neutral-tint-foreground`), Failed (`bg-destructive-tint text-destructive`) + Locked. No completed-date — appointment date shown for recorded rows too (Session 14 decision). Empty state: dashed-border box with calendar icon. |
 | `TwoColumnDetailLayout` | grid | Application detail page | Left column: fixed-width summary `Card` (applicant/entity info + primary action button). Right column: flexible-width `Card` (pipeline/related records). Stacks to one column below `lg` breakpoint. |
-| `ConfirmationBanner` | inline (not a `Card`) | post-issuance state on detail pages | Light-green rounded box with a check/award icon, bold headline (`"License LIC-3 issued"`), muted subtext (`"Valid 2026-08-11 to 2036-08-11"`). Replaces the action button once the action is complete — never shown alongside a still-active action button for the same thing. |
+| `ConfirmationBanner` | inline (not a `Card`) | post-issuance state on detail pages | Light-green rounded box with a check/award icon, bold headline (`"License LIC-3 issued"`), muted subtext (`"Valid 2026-08-11 to 2036-08-11"`). Replaces the action button once the action is complete — never shown alongside a still-active action button for the same thing. Imprint: `applicant-card.tsx` footer (Session 17). |
 | `EmptyState` | — | any list with zero rows | Not directly captured in the reference screenshots, but required: centered icon + one-line message + primary action button if applicable. Build to match `DataTable` spacing. |
 | `AuthSplitScreen` | grid (2-col) | `/` | Left `bg-sidebar` panel (hidden below `lg`): logo, `h1` headline, one-line description, 3 feature bullets each with a circular green check icon (`bg-success/90` circle + white `CircleCheck` — user decision 0.B.2, was `ShieldCheck`). Right white panel, vertically centered form: "Sign in" `h2` + muted subtext, `PasswordInput`-style fields, full-width primary `Sign in` button, `DemoAccountsCard` beneath. |
 | `PasswordInput` | shadcn `Input` + `Button` (icon) | `AuthSplitScreen` | Lock icon left, `Eye`/`EyeOff` toggle button right (toggles `type="password"`/`"text"`, never logs or exposes the value otherwise). |
@@ -225,6 +225,44 @@ Last updated: 2026-08-18
 | Accent usage     | primary action `bg-primary text-primary-foreground`; submit spinner `LoaderCircle animate-spin` |
 
 **Pattern notes:** The description line is the EXACT lock warning from the spec — "Saving a result permanently locks this appointment. A failed test requires a new appointment." — load-bearing copy (ui-registry Do Not list) mirroring invariants #20/#21. Result = shadcn `Select` with the backend's `passed`/`failed` vocabulary; zod enum validates, RHF errors under field. Notes optional, `MaxLength(500)` mirror. Submit sends `{ appointmentId, dto }` to `useRecordTestResult(applicationId)`; 409 stay-open pattern; "Save & Lock" label only while idle (spinner "Saving…" while pending).
+
+### IssueLicenseModal (6.2 issuance confirmation)
+
+File: `apps/web/src/features/local-license-applications/components/Modals/issue-license-modal.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-popover` (DialogContent); footer bar `bg-background` (#F8FAFC per spec) |
+| Border           | `ring-1 ring-foreground/10` (primitive); footer `border-t border-border` |
+| Border radius    | `rounded-xl` (primitive) + `overflow-hidden`; content `max-w-[480px]` (~480px spec) |
+| Text — primary   | title `text-lg font-semibold`; labels `text-sm font-medium` (Label) |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; textarea placeholder "First time issuance."; field errors `text-xs font-medium text-destructive` |
+| Spacing          | header `px-6 pt-6 pb-1`; fields `px-6 py-4 space-y-4`; textarea `min-h-24`; footer `px-6 pt-5 pb-6` |
+| Hover state      | n/a (dialog) |
+| Shadow           | none (elevation via ring + `data-open:animate-in`) |
+| Accent usage     | primary action `bg-primary text-primary-foreground` + `Award` icon (ribbon/badge per spec); submit spinner `LoaderCircle animate-spin` |
+
+**Pattern notes:** Fifth FormModal implementation (PersonFormModal template). Subtitle carries the FULL spec sentence with live values: "Issue a {ClassName} license to {Applicant}. Fee: ${ClassFees}. If the applicant is not yet a driver, a driver record is created automatically." — the fee read live via `useLicenseClasses` (invariant #28), the driver-record sentence is the front-end face of invariant #23 (one transaction). Single field: Notes textarea, placeholder = FirstTime issue-reason copy (7.x renewal/replacement modals will vary it), `MaxLength(500)` mirror. On success the mutation invalidates `detail(id)` + `lists()` (status → Completed everywhere, invariant #6) and the returned `LicenseDto` rides up via `onIssued` — the page renders the banner from server truth, no second fetch. 409s (pipeline gate #22, dead application, active same-class license #26) surface verbatim in the standard alert box; dialog stays open. `useIssueLicense(applicationId)` ships without the build-plan's drivers-list invalidation — no `driversKeys` exist until Feature 10 (Session 17 note).
+
+### ApplicantCard footer states (6.2 post-issuance)
+
+File: `apps/web/src/features/local-license-applications/components/Left-Column/applicant-card.tsx`
+Last updated: 2026-08-19
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | banner container `bg-success-tint` (#F0FDF4 per spec) |
+| Border           | banner `border border-success/20` (#DCFCE7-family light green) |
+| Border radius    | `rounded-lg` (banner) |
+| Text — primary   | headline `text-sm font-bold text-success` (#059669 per spec) + `Award` icon; license id `font-mono` (`LIC-{id}`, ui-rules ID rule) |
+| Text — secondary | validity `text-sm text-muted-foreground` ("Valid {issueDate} to {expirationDate}", raw YYYY-MM-DD from the date columns) |
+| Spacing          | banner `p-4`; headline cluster `gap-2`, validity `mt-1` |
+| Hover state      | none |
+| Shadow           | none |
+| Accent usage     | `Award` `text-success` (dark green icon); CTA variants unchanged from 5.2 |
+
+**Pattern notes:** THREE footer cases, not two: (1) `issuedLicense` state present → full banner "License LIC-N issued / Valid a to b"; (2) application status `Completed` WITHOUT local license state (page refreshed after a success) → banner minus fabricated specifics, so a re-issued CTA is never offered past the 6.1 one-way door; (3) otherwise the 5.2 two-state CTA (disabled `bg-muted-solid` why-label / enabled `bg-primary`), the enabled variant now wired to the issuance modal. Banner replaces the button entirely (ui-registry ConfirmationBanner rule — never alongside a live CTA).
 
 ### Combobox (Link to Person)
 

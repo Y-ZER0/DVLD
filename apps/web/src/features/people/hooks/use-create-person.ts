@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { personService } from "../services/person.service"
 import { peopleKeys } from "../peopleKeys"
-import type { CreatePersonRequestDto } from "../create-person-request.dto"
+import type { CreatePersonRequestDto } from "../dtos/create-person-request.dto"
 
 // useCreatePerson — registers a new citizen, then refreshes every people
 // list (invariant #6: every mutation invalidates on success).

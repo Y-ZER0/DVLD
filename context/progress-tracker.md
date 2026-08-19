@@ -13,7 +13,7 @@ paired `[LOGIC]` item is checked and reviewed.
 |---|---|
 | Phase 0 — Foundation Setup | In Progress (0.A + 0.B done) |
 | Phase 1 — Foundation | In Progress (1.1 + 1.2 + 2.1 + 2.2 + 3.1 done) |
-| Phase 2 — Application Lifecycle & Testing | In Progress (4.1 + 4.2 done) |
+| Phase 2 — Application Lifecycle & Testing | In Progress (4.1 + 4.2 + 5.1 + 5.2 + 6.1 + 6.2 done) |
 | Phase 3 — Advanced License Services | Not Started |
 | Phase 4 — Utilities & Reports | Not Started |
 
@@ -39,8 +39,8 @@ paired `[LOGIC]` item is checked and reviewed.
 - [x] 4.2 — Local Driving License Applications `[UI]`
 - [x] 5.1 — Test Appointment & Results System `[LOGIC]`
 - [x] 5.2 — Test Appointment & Results System `[UI]`
-- [ ] 6.1 — License Issuance `[LOGIC]`
-- [ ] 6.2 — License Issuance `[UI]`
+- [x] 6.1 — License Issuance `[LOGIC]`
+- [x] 6.2 — License Issuance `[UI]`
 
 ### Phase 3
 - [ ] 7.1 — License Renewal & Replacement `[LOGIC]`
@@ -91,6 +91,44 @@ needed to jump back in cold>
 **Known issues / follow-ups:** n/a
 **Start next session with:** 0.A — Monorepo, Database & Shared Package Scaffold
 ```
+
+### Session 17 — 2026-08-19
+**Completed:** **6.2 — License Issuance `[UI]`** (full vertical slice: web request DTO, service method, mutation hook, issuance modal, applicant-card banner states, page wiring). Built per the user's exact descriptive prompts; no API smoke (user directive).
+**Decisions made:**
+- **Issued license rides page state, not a second fetch** — `IssueLicenseModal` lifts the mutation's returned `LicenseDto` up via `onIssued`; the ApplicantCard banner renders id/dates from server truth. The 6.1 detail DTO carries no license fields, and there is no license-by-application endpoint — a second read didn't exist to add without LOGIC work.
+- **Three footer cases on the ApplicantCard, not two** — (1) `issuedLicense` state → full banner "License LIC-N issued / Valid a to b"; (2) status `Completed` without state (page refreshed after success) → banner with no fabricated specifics — the one-way door means the CTA must never be re-offered; (3) the 5.2 two-state CTA, enabled variant now wired to the modal. Completed-after-refresh previously would have re-rendered a live (doomed 409) issuance button — pre-existing edge, fixed by the COMPLETED branch.
+- **Hook invalidates `detail(id)` + `lists()`** — status → Completed refetches the detail pill, the disappearing Cancel button, and every register row's pill (invariant #6). Pipeline query deliberately NOT invalidated (issuance doesn't change stages). **Build-plan § 6.2's drivers-list invalidation deferred** — no `driversKeys`/drivers feature exists until Feature 10 (Session 16 memory note; commented in-file).
+- **Subtitle sentence is the spec's exact copy with live values** — "Issue a {className} license to {name}. Fee: ${classFees} (live via `useLicenseClasses`, invariant #28). If the applicant is not yet a driver, a driver record is created automatically." (front-end face of invariant #23).
+- **Notes placeholder "First time issuance." = FirstTime issue-reason copy** (only reason this feature issues; 7.x modals will vary it). Focus ring = shadcn Textarea default (ring token #2563EB) — nothing custom.
+- Banner = Imprint-worthy: `bg-success-tint` + `border-success/20` (Passed-stage precedent), `text-success` headline + `Award` icon, mono `LIC-{id}`, muted validity line with raw YYYY-MM-DD dates (registry ConfirmationBanner sample format).
+**Deviations from plan:** none of substance — drivers-list invalidation deferred (above); banner also renders on the Completed-without-state case (above, + fix not a deviation).
+**Known issues / follow-ups:**
+- **No API boot + no smoke (user directive)** — `pnpm typecheck` 4/4, `pnpm build` green (route table unchanged; `/applications/local/[id]` 8.69 kB → 9.12 kB with the modal). Issue-license roundtrip + all 409 paths unverified at runtime.
+- **REVIEWs still owed (user's call): 6.1** (now has its 6.2 consumer to check against), **5.1, 5.2, backlog 0.B.2/0.C.1/1.1/4.1/4.2**.
+- The Completed-after-refresh banner shows no license number/dates (data doesn't exist client-side) — acceptable; a future license-summary field on the detail DTO (7.2 register reuse) would close it.
+- Carried: pg deprecation warning; TestType descriptions provisional; citizen-options 1000-window; Roles column data-source decision (now partially unblocked — Drivers table exists).
+**Start next session with:** **REVIEW pass on 6.1 `[LOGIC]`** (invariant cross-refs: #9 single DTO, #11 toDto gate, #22 pipeline re-verification, #23 one-transaction driver find-or-create, #26 active-same-class guard inside the tx, #28 fee snapshot, #29 session user, transaction atomicity; manager-parameter cross-domain methods are the new pattern to scrutinize), then decide with the user: 7.x next per build-plan, or clear the 5.1/5.2/backlog REVIEW queue first.
+
+### Session 16 — 2026-08-19
+**Completed:** **6.1 — License Issuance `[LOGIC]`** (full vertical slice: MCP migration, shared contracts, Drivers module, Licenses module with entity/repository/service/controller; no UI code touched). Built directly per user directive — no REVIEW passes run on 5.1/5.2/6.1, no ARCHITECT skill, no API smoke.
+**Decisions made:**
+- **Schema via Supabase MCP `create_drivers_licenses_tables`** (Session 11/12/14 precedent, user directive) — BOTH missing tables created in one migration: `Drivers` (SERIAL PK, `PersonID UNIQUE` FK → People NO ACTION, CreatedByUserID FK, `CreatedDate timestamptz`) + `Licenses` (SERIAL PK, `ApplicationID UNIQUE` FK → Applications, DriverID/LicenseClassID/CreatedByUserID FKs, `IssueDate`/`ExpirationDate` DATE, nullable `Notes`, `PaidFees numeric(10,2)`, `IsActive BOOLEAN NOT NULL DEFAULT true`, `IssueReason INTEGER`, + indexes on DriverID and LicenseClassID for the Feature 7/10 register reads). No TypeORM migration file.
+- **New `modules/drivers/` module created NOW (not at Feature 10)** — invariant #23 needs the Drivers row at issuance. Minimal: `Driver` entity + `DriversService.findOrCreateByPersonId(manager, personId, actingUserId)` — **manager-parameter pattern**: the find-or-create executes on the CALLER's transaction manager so it is atomic with the Licenses insert (invariant #23); the DB's unique PersonID backstops a concurrent first-issuance race (loser's transaction rolls back whole — no retry). No repository class yet (the only read runs on a foreign manager; repository would be dead code — TestsRepository precedent). `exports: [DriversService]`.
+- **New `modules/licenses/` = the architecture.md "issuance, renewal, replacement" home** — `License` entity (relations: application one-to-one, driver, licenseClass; JoinColumns mirror DBML), `LicensesRepository.findById` (joined driver.person + licenseClass), `IssueLicenseRequestDto` (notes optional ≤500), `LicensesService.issueLicense`, `LicensesController`. Feature 7/8 extend this module.
+- **Route ownership: LicensesController uses `@Controller('local-license-applications')` for `POST :id/issue-license`** — build-plan § 6.1's product contract puts the action on the application's resource path; putting the route on the applications controller instead would create a module cycle (licenses → applications is required for the gates), so the licenses module owns the route with the foreign prefix (documented in the controller header).
+- **issueLicense() = ONE transaction with 4 writes**: (a) driver find-or-create via DriversService (invariant #23), (b) **invariant #26 guard** — `manager.findOne(License, { driverId, licenseClassId, isActive: true })` inside the transaction (NOT via repository — a repo call would run on its own connection and see pre-transaction state); active-same-class → 409, (c) Licenses insert, (d) application completion. **Completion of a foreign domain's row uses a second manager-parameter service method: `LocalLicenseApplicationsService.completeInTransaction(manager, applicationId, completedAt)`** (mirrors cancel()'s LastStatusDate stamping; same pattern as DriversService) — atomic completion instead of importing the Application entity into the licenses module.
+- **IssueReason stays a plain int** (DBML note '1:FirstTime..4:Replacement(Lost)') — Session 12's enum conversion was a user directive for ApplicationStatus only; new shared `IssueReason` enum mirrors the 1-4 ints.
+- **Pipeline re-verification via TestingService.getPipeline** (TestingModule now exports TestingService) — `stages.every(status === 'Passed')` else 409 (invariant #22 — never trust the UI's disabled button); the read is fresh (re-reads the appointments inside getPipeline).
+- **Gates order: 404 (app) → 409 status-not-New (Cancelled/Completed one-way door) → 409 pipeline → 404 class → transaction** (class read outside the transaction is fine — fee/validity config rows, immutable during the write; lookup reads are the 5.1 precedent).
+- **ExpirationDate via date-fns** (already in api): `addYears(issueDate, DefaultValidityLength)` with `format(..., 'yyyy-MM-dd')` — local-midnight-safe for the DATE columns (Person.dateOfBirth pattern); IssueDate = `new Date()` formatted the same way.
+- **Full `LicenseDto` returned** (shared: id, applicationId, driverId, driverName, nationalNumber, licenseClassId, className, issueDate, expirationDate, notes, paidFees, isActive, issueReason) — the contract Feature 7.2's register columns and 10.1's history reuse; 6.2's success card only consumes id/dates of it.
+**Deviations from plan:** none of substance — Drivers module created early (invariant #23 demands it; plan listed it under Feature 10); invariant #26 guard added at issuance (plan's § 6.1 lists 4 steps; the "never two active same-class licenses" rule is absolute and renewal's transaction enforces it — issuance is the other door into the Licenses table, so it got the mirror guard); route lives on the licenses module (above).
+**Known issues / follow-ups:**
+- **No API boot + no smoke (user directive)** — `pnpm typecheck` 4/4, `pnpm build` (nest + next route table unchanged, `/applications/local/[id]` 8.69 kB), lint n/a for api/web. The new route + migration unverified at runtime.
+- **REVIEWs still owed (AGENTS.md § 3.1): 6.1 `[LOGIC]` itself, then 5.1 + 5.2, backlog 0.B.2, 0.C.1, 1.1, 4.1, 4.2** — user continues to build by directive (skip list for next session is the user's call).
+- Transactional cross-domain manager-parameter methods (DriversService.findOrCreateByPersonId, LocalLicenseApplicationsService.completeInTransaction) are a NEW codebase pattern — REVIEW should confirm they don't blur the module boundary; the alternative (importing foreign entities into licenses.service) was rejected as worse.
+- pg deprecation warning on boot (carried); TestType descriptions provisional (carried); Roles column pending Drivers (now partially unblocked — Drivers table EXISTS; the 1.2 roles column still needs a data source decision); citizen-options 1000-window (carried).
+**Start next session with:** **6.2 — License Issuance `[UI]`** per build-plan § 6.2 (wire the currently-inert Issue License CTA on `local-license-application-detail-page.tsx` — it already renders both states from Session 15, `bg-muted-solid` disabled + `bg-primary` enabled-when-all-Passed; the click currently inert by design): `IssueLicenseModal` (summary: class/applicant/fee live from `useLicenseClasses`, Notes ≤500, confirm), success state replacing the button with the inline "License LIC-N issued — Valid <issue> to <expiry>" card, `useIssueLicense` hook + `issueLicenseKeys`/service against `POST /local-license-applications/:id/issue-license` (IssueLicenseRequestDto = `{ notes? }` — web DTO already mirrors the backend class), invalidating the application detail (+ drivers list later) on success. Then REVIEW pass on 6.1 `[LOGIC]` + 6.2 `[UI]` unless user redirects.
 
 ### Session 15 — 2026-08-18
 **Completed:** **5.2 — Test Appointment & Results System `[UI]`** (full vertical slice: 5 new tokens, test-types lookup hook, pipeline query key, testing service + 2 request DTOs, 3 hooks, 4 components, detail page rebuilt to the user's descriptive prompts).

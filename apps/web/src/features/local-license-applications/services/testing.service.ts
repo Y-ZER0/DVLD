@@ -1,8 +1,8 @@
 import { apiClient } from "@/shared/lib/api-client"
 import type { ApiResponse } from "@/shared/types/api-response"
 import type { TestAppointmentDto, TestPipelineDto } from "@repo/shared"
-import type { ScheduleTestAppointmentRequestDto } from "../schedule-test-appointment-request.dto"
-import type { RecordTestResultRequestDto } from "../record-test-result-request.dto"
+import type { ScheduleTestAppointmentRequestDto } from "../dtos/schedule-test-appointment-request.dto"
+import type { RecordTestResultRequestDto } from "../dtos/record-test-result-request.dto"
 
 // testingService — the 5.2 test-pipeline HTTP surface. It calls routes
 // owned by the backend `testing` module (/test-appointments/*), but the

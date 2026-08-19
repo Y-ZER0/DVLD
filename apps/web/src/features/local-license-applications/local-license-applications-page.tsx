@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LocalLicenseApplicationsList } from "./components/local-license-applications-list"
-import { NewLocalApplicationModal } from "./components/new-local-application-modal"
+import { NewLocalApplicationModal } from "./components/Modals/new-local-application-modal"
 
 // LocalLicenseApplicationsPage — the 4.2 "Local Driving License
 // Applications" screen composition (invariant #12: the page route stays

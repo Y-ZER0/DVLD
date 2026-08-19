@@ -1,8 +1,8 @@
 import { apiClient } from "@/shared/lib/api-client"
 import type { ApiResponse, PaginatedApiResponse } from "@/shared/types/api-response"
 import type { PersonDto } from "@repo/shared"
-import type { CreatePersonRequestDto } from "../create-person-request.dto"
-import type { UpdatePersonRequestDto } from "../update-person-request.dto"
+import type { CreatePersonRequestDto } from "../dtos/create-person-request.dto"
+import type { UpdatePersonRequestDto } from "../dtos/update-person-request.dto"
 
 // personService — the people feature's service layer (invariant #4: the
 // ONLY files allowed to touch apiClient for this feature). Pure, stateless

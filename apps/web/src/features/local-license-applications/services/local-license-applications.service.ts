@@ -1,7 +1,13 @@
 import { apiClient } from "@/shared/lib/api-client"
 import type { ApiResponse, PaginatedApiResponse } from "@/shared/types/api-response"
-import type { ApplicationStatus, LocalDrivingLicenseApplicationDto, PersonDto } from "@repo/shared"
+import type {
+  ApplicationStatus,
+  LicenseDto,
+  LocalDrivingLicenseApplicationDto,
+  PersonDto,
+} from "@repo/shared"
 import type { CreateLocalLicenseApplicationRequestDto } from "../create-local-license-application-request.dto"
+import type { IssueLicenseRequestDto } from "../dtos/issue-license-request.dto"
 
 // localLicenseApplicationsService — the applications feature's service
 // layer (invariant #4: the ONLY files allowed to touch apiClient for this
@@ -66,6 +72,24 @@ export const localLicenseApplicationsService = {
   async cancelApplication(id: number): Promise<LocalDrivingLicenseApplicationDto> {
     const { data } = await apiClient.patch<ApiResponse<LocalDrivingLicenseApplicationDto>>(
       `/local-license-applications/${id}/cancel`,
+    )
+    return data.data
+  },
+
+  // POST /local-license-applications/:id/issue-license — the 6.1
+  // issuance action (route owned by the backend licenses module with the
+  // foreign applications prefix — the same cross-module-route precedent
+  // as testingService's /test-appointments calls). Returns the issued
+  // LicenseDto directly so the detail page's post-issuance banner can
+  // render the license id + validity dates from server truth without a
+  // second read. The backend 409s on a non-New application, an
+  // incomplete pipeline (invariant #22), or an existing active
+  // same-class license (invariant #26) — surfaced verbatim by the
+  // modal, which stays open.
+  async issueLicense(id: number, dto: IssueLicenseRequestDto): Promise<LicenseDto> {
+    const { data } = await apiClient.post<ApiResponse<LicenseDto>>(
+      `/local-license-applications/${id}/issue-license`,
+      dto,
     )
     return data.data
   },

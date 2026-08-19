@@ -1,46 +1,43 @@
-# Memory — Session 15 (5.2 Test Appointment & Results System [UI])
+# Memory — Session 17 (6.2 License Issuance [UI])
 
-Last updated: 2026-08-18
+Last updated: 2026-08-19
 
 ## What was built
 
-- **5.2 `[UI]` full slice** (user supplied the exact descriptive prompts for `local-license-application-detail-page.tsx`; built to match verbatim — no boot, no smoke per session pattern):
-  - `apps/web/src/app/globals.css` + `context/ui-tokens.md`: 5 new token groups added FIRST (token-first rule) — `success-tint`/`success-tint-foreground` (#F0FDF4/#15803D), `warning-tint`/`warning-tint-foreground` (#FEF3C7/#B45309), `destructive-tint` (#FEE2E2), `neutral-tint`/`neutral-tint-foreground` (#E2E8F0/#475569), `muted-solid` (#94A3B8).
-  - `apps/web/src/features/lookup/`: `lookupKeys.ts` `testTypes()` branch + new `hooks/use-test-types.ts` (5-min staleTime) — powers the live "Booking fee: $X." notice.
-  - `apps/web/src/features/local-license-applications/`: `localLicenseApplicationKeys.ts` `pipeline(id)` branch; new `schedule-test-appointment-request.dto.ts` + `record-test-result-request.dto.ts`; `services/testing.service.ts` (getTestPipeline / scheduleTestAppointment / recordTestResult against `/test-appointments/*`); hooks `use-test-pipeline.ts`, `use-schedule-test-appointment.ts`, `use-record-test-result.ts` (both mutations invalidate `detail(id)` + `pipeline(id)`).
-  - 4 new components: `components/test-pipeline-card.tsx` (EXACTLY 4 states — Passed green-tint check card / Scheduled white + amber date pill + Record Result / Schedule white + failed-attempt count + outline Schedule btn + calendar icon / Locked muted gray + lock icon; disabled buttons carry explanatory `title`), `components/appointment-history-list.tsx` (3 pill cases only: Pending `bg-warning-tint text-warning-tint-foreground` / Passed `bg-success/15 text-success-tint-foreground` + Locked / Failed `bg-destructive-tint text-destructive` + Locked; empty dashed state), `components/record-result-modal.tsx` (`max-w-[480px]`, EXACT lock-warning subtitle copy from spec, Select over `passed|failed`, notes ≤500, `bg-background` footer strip, Cancel + "Save & Lock"), `components/schedule-appointment-modal.tsx` (FormModal chrome, native date input with the person DOB `showPicker()` treatment + single CalendarIcon, live fee notice).
-  - `local-license-application-detail-page.tsx` rewritten per spec: back link + H1 `Application L-{id}` + inline muted "filed <date>"; Cancel = soft-red tint button (New-only); LEFT card (Applicant header, soft-blue avatar initials, mono national number, divider, right-aligned KV rows — Status pill / License Class / Application Fee snapshot / License Fee (on issue) LIVE from `useLicenseClasses`; footer CTA disabled = `bg-muted-solid` + "Issue License (pass all tests first)" + title, enabled = `bg-primary` only when all stages Passed, click inert until 6.2); RIGHT card = single container with Test Pipeline (exact subtitle) + divider + Appointment History.
-  - ui-registry.md: table rows updated + 4 new imprint sections (TestPipelineCard, AppointmentHistoryList, ScheduleAppointmentModal, RecordResultModal) + LocalLicenseApplicationDetailPage imprint rewritten. progress-tracker.md: 5.2 checked, Session 15 entry written (full detail — see it instead of this file for token classes).
+- **6.2 `[UI]` full slice** (built per the user's exact descriptive prompts — modal spec + post-issuance applicant-card spec; no ARCHITECT/REVIEW/API smoke):
+  - New `apps/web/src/features/local-license-applications/dtos/issue-license-request.dto.ts` — `{ notes?: string }`, mirrors backend 6.1 class.
+  - `services/local-license-applications.service.ts` += `issueLicense(id, dto)` → `POST /local-license-applications/:id/issue-license`, returns `LicenseDto` (route owned by the backend licenses module, foreign prefix — testingService precedent).
+  - New `hooks/use-issue-license.ts` — bound to application id; on success invalidates `detail(id)` + `lists()` (pipeline key deliberately NOT invalidated; drivers-list invalidation deferred — no driversKeys until Feature 10).
+  - New `components/Modals/issue-license-modal.tsx` — 480px FormModal chrome; exact spec subtitle "Issue a {class} license to {name}. Fee: ${classFees}. If the applicant is not yet a driver, a driver record is created automatically." (live fee via `useLicenseClasses`, invariant #28); Notes textarea (placeholder "First time issuance.", 500 cap, default shadcn blue focus ring); footer `bg-background` strip, Cancel + Award-icon primary; 409s (pipeline #22 / dead app / active same-class #26) stay-open.
+  - `components/Left-Column/applicant-card.tsx` — footer now THREE cases: (1) `issuedLicense` state → green banner `bg-success-tint border-success/20` with bold `text-success` + Award "License LIC-N issued" (mono id) + muted "Valid {issueDate} to {expirationDate}" (raw YYYY-MM-DD); (2) status Completed without state (post-refresh) → banner minus fabricated specifics; (3) the 5.2 two-state CTA (disabled `bg-muted-solid` / enabled `bg-primary`), enabled one wired via new `onIssueLicense` prop.
+  - `local-license-application-detail-page.tsx` — `issueOpen`/`issuedLicense` state, modal wired, comments updated.
+- Docs: `ui-registry.md` += 2 imprint sections (IssueLicenseModal, ApplicantCard footer states) + ConfirmationBanner row updated; `progress-tracker.md` 6.2 checked + Session 17 entry.
 
 ## Decisions made
 
-- **Actions gated on status New (`canAct`)** — dead applications show Schedule/Record buttons visibly disabled with explanatory `title` (ui-rules disabled rule; the 5.1 service 409s anyway). Pipeline stages unchanged for Cancelled/Completed; cancel button renders only when New.
-- **`useRecordTestResult(applicationId)`** — hook binds the invalidation target; `{ appointmentId, dto }` rides in the mutation payload (a screen can record against any of several bookings).
-- **Attempt count from history** — "· N failed attempt(s)" on Schedule-state stages derived from `pipeline.history` (Session 14 contract: history is the retake source), never from stage status.
-- **Tint token family** — all status pills (detail Status pill included) + stepper states use the new tint tokens; the 4.2 list's older `bg-warning/10` pill classes were left untouched (flag that drift in the 4.2 REVIEW).
-- **Issue License button shipped in both states** per the user's prompt even though Feature 6.2 formally owns the click — rendered inert (no fake action).
-- `testingService` lives in local-license-applications/services despite `/test-appointments/*` routes (invariant #13 cross-route-call precedent: getCitizenOptions, getUnlinkedPeople).
+- **Issued license rides page state, not a refetch** — the modal lifts the mutation's returned `LicenseDto` via `onIssued`; banner renders from server truth. No license-by-application endpoint exists and the detail DTO carries no license fields — a second read would have been LOGIC work.
+- **Three-case footer** — Completed-without-state branch fixes a pre-existing edge: after a refresh, the old code would have re-rendered a live (doomed 409) issuance button on a Completed application.
+- **Invalidation scope** — `detail(id)` + `lists()` only; pipeline untouched; drivers (build-plan § 6.2) deferred with in-file comment.
+- Banner styling = Passed-stage precedent (`bg-success-tint` + `border-success/20`), `text-success` headline (#059669 per spec), mono `LIC-{id}` per ui-rules ID rule, raw ISO dates per registry ConfirmationBanner sample.
 
 ## Problems solved
 
-- Post-first-compile bug: JSX referenced `canCancel` before it existed — added `const canCancel = application.applicationStatus === NEW` (typecheck caught it).
-- `useRecordTestResult` shape refined mid-build: rebinding the hook to applicationId (not appointmentId) so a single hook instance serves all stages on one screen.
-- Schedule modal date field reuses the DOB calendar pattern from `person-form-fields.tsx` (showPicker fallback, hidden indicator stretch, one icon) — no duplicate styling logic.
+- Post-refresh completion edge: banner branch (2) shows "License issued" without fabricating id/dates — one-way door means the CTA must never re-open on a Completed application.
+- No driversKeys exist yet → drivers-list invalidation skipped with comment (Session 16 memory noted "+ drivers list later").
 
 ## Current state
 
-- **typecheck + build green** (`pnpm typecheck` 4/4; `pnpm build --filter @dvld/web` — Next 15.5.23, route table unchanged, `/applications/local/[id]` rebuilt 8.56 kB). Web package has NO lint script (dev/build/start/typecheck only) — turbo `lint` runs nothing for it.
-- **No API boot, no smoke** (session pattern) — pipeline/schedule/record roundtrips + both modals unverified at runtime.
-- 5.2 `[UI]` complete; 6.1 `[LOGIC]` (License Issuance) is next per build-plan.
+- **Typecheck 4/4, `pnpm build` green** (route table unchanged; `/applications/local/[id]` 8.69 kB → 9.12 kB with modal).
+- **No API boot, no smoke** (session pattern) — issuance roundtrip + all 409 paths unverified at runtime.
+- 6.2 `[UI]` complete — **Phase 2 fully done** (4.1–6.2). Next per build-plan: Phase 3 (7.x Renewal & Replacement).
 
 ## Next session starts with
 
-**REVIEW pass on 5.2 `[UI]`** (AGENTS.md § 3.1 mandates REVIEW after the paired sub-task), cross-refs: exact spec copy on modal/page (the lock-warning line is load-bearing), invariant #28 (no hardcoded fees — License Fee live from useLicenseClasses, fee notice live from useTestTypes), #5/#6 query keys + invalidation-only, #4 services-only apiClient, #7 stateless service funcs, #13 cross-route calls, #9 DTOs via shared types, ui-rules disabled-state rule via `title`, 4-state stepper contract (Session 14), tint tokens in globals.css only. Carried REVIEWs: 4.1 `[LOGIC]` + 5.1 `[LOGIC]` + backlog 0.B.2, 0.C.1, 1.1, 4.2. Then **6.1/6.2 — License Issuance**: wire the Issue License CTA (currently inert) + Licenses table/logic per build-plan Section 6; confirmation dialog + issue flow UI.
+**REVIEW pass on 6.1 `[LOGIC]`** (now has its 6.2 consumer): invariant cross-refs #9/#11/#22/#23/#26/#28/#29, step comments, transaction atomicity, manager-parameter cross-domain methods (findOrCreateByPersonId, completeInTransaction) as the new pattern to scrutinize. Then decide with the user: **7.1 — License Renewal & Replacement `[LOGIC]`** per build-plan (existingLicenseId + reason DTO, transactional renewal with 409 on open detention invariant #32, old-row deactivation #26), or clear the standing REVIEW queue first (5.1, 5.2, backlog 0.B.2/0.C.1/1.1/4.1/4.2).
 
 ## Open questions
 
-- Live smoke of 5.1/5.2 (and 4.x) endpoints + web still owed — offer at session start (user has declined repeatedly).
-- Citizen-options 1000-window follow-up (carried from Session 13).
-- TestType descriptions provisional until `System_Requirments.md` surfaces (carried).
-- Roles column strategy pending Drivers feature (carried).
-- pg deprecation warning on API boot — non-blocking (carried).
+- Live smoke of 5.x/6.1/6.2 endpoints still owed — offer at session start (user has declined repeatedly).
+- Completed-after-refresh banner lacks license number/dates (unavailable client-side) — a license-summary field on the detail DTO (7.2 register reuse) would close it if ever wanted.
+- Roles column (1.2 deferred) partially unblocked (Drivers table exists) — still needs data-source decision (EXISTS subqueries vs frontend derivation).
+- Carried: TestType descriptions provisional; citizen-options 1000-window; pg deprecation warning on boot.

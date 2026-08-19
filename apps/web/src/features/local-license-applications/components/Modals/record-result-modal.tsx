@@ -25,7 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import type { TestStageDto } from "@repo/shared"
-import { useRecordTestResult } from "../hooks/use-record-test-result"
+import { useRecordTestResult } from "../../hooks/use-record-test-result"
 
 // STEP 1: The zod schema is the single client-side validation definition
 //         (library-docs.md § 9) — it mirrors the 5.1

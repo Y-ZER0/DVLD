@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { personService } from "../services/person.service"
 import { peopleKeys } from "../peopleKeys"
-import type { UpdatePersonRequestDto } from "../update-person-request.dto"
+import type { UpdatePersonRequestDto } from "../dtos/update-person-request.dto"
 
 // useUpdatePerson — edits an existing citizen and refreshes both the list
 // branch (the row's display values changed) and that citizen's detail

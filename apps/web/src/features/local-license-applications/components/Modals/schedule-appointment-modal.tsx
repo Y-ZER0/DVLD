@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import { useTestTypes } from "@/features/lookup/hooks/use-test-types"
 import type { TestStageDto } from "@repo/shared"
-import { useScheduleTestAppointment } from "../hooks/use-schedule-test-appointment"
+import { useScheduleTestAppointment } from "../../hooks/use-schedule-test-appointment"
 
 // STEP 1: The zod schema is the single client-side validation definition
 //         (library-docs.md § 9) — it mirrors the 5.1

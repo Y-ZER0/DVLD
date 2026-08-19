@@ -27,8 +27,8 @@ import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import { ApplicationType, type PersonDto } from "@repo/shared"
 import { useLicenseClasses } from "@/features/lookup/hooks/use-license-classes"
 import { useApplicationTypes } from "@/features/lookup/hooks/use-application-types"
-import { useCitizenOptions } from "../hooks/use-citizen-options"
-import { useCreateLocalLicenseApplication } from "../hooks/use-create-local-license-application"
+import { useCitizenOptions } from "../../hooks/use-citizen-options"
+import { useCreateLocalLicenseApplication } from "../../hooks/use-create-local-license-application"
 
 // STEP 1: The zod schema is the single client-side validation definition —
 //         it mirrors the backend CreateLocalLicenseApplicationRequestDto

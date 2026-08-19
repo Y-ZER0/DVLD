@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { testingService } from "../services/testing.service"
 import { localLicenseApplicationKeys } from "../localLicenseApplicationKeys"
-import type { RecordTestResultRequestDto } from "../record-test-result-request.dto"
+import type { RecordTestResultRequestDto } from "../dtos/record-test-result-request.dto"
 
 // useRecordTestResult — records the Pass/Fail verdict for one appointment
 // and permanently locks it (PATCH /test-appointments/:id/result, 5.1 —
