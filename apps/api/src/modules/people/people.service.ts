@@ -107,6 +107,16 @@ export class PeopleService {
     return this.toDto(saved);
   }
 
+  async updatePhotoUrl(id: number, photoUrl: string | null): Promise<PersonDto> {
+    const person = await this.peopleRepo.findById(id);
+    if (!person) {
+      throw new NotFoundException('Person not found');
+    }
+    person.photoUrl = photoUrl;
+    const saved = await this.peopleRepo.save(person);
+    return this.toDto(saved);
+  }
+
   // Hard delete; rows referenced by other tables surface as a 409 (FK violation).
   async remove(id: number): Promise<{ id: number }> {
     // 404 when the row doesn't exist.

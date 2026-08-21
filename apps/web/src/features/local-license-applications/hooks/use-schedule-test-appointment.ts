@@ -19,6 +19,7 @@ export function useScheduleTestAppointment(localDrivingLicenseApplicationId: num
       queryClient.invalidateQueries({
         queryKey: localLicenseApplicationKeys.pipeline(localDrivingLicenseApplicationId),
       })
+      queryClient.invalidateQueries({ queryKey: localLicenseApplicationKeys.lists() })
     },
   })
 }

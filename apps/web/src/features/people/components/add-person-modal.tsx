@@ -15,9 +15,13 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Gender } from "@repo/shared"
+import { useQueryClient } from "@tanstack/react-query"
 import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import { useCreatePerson } from "../hooks/use-create-person"
+import { personService } from "../services/person.service"
+import { peopleKeys } from "../peopleKeys"
 import { PersonFormFields } from "./person-form-fields"
+import { PersonPhotoField } from "./person-photo-field"
 import type { PersonFormValues } from "./person-form-values"
 
 const createPersonSchema = z.object({
@@ -61,23 +65,41 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
   })
 
   const createPerson = useCreatePerson()
+  const queryClient = useQueryClient()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+
+  const initials = `${form.watch("firstName")?.charAt(0) ?? ""}${form.watch("lastName")?.charAt(0) ?? ""}`.toUpperCase()
 
   useEffect(() => {
     if (open) {
       form.reset()
       setSubmitError(null)
+      setPhotoFile(null)
     }
   }, [open, form])
 
   const onSubmit = async (values: PersonFormValues) => {
     setSubmitError(null)
     try {
-      await createPerson.mutateAsync(values)
+      const created = await createPerson.mutateAsync(values)
+      if (photoFile) {
+        setPhotoUploading(true)
+        try {
+          await personService.uploadPersonPhoto(created.id, photoFile)
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.lists() })
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.detail(created.id) })
+        } finally {
+          setPhotoUploading(false)
+        }
+      }
       onOpenChange(false)
       form.reset()
+      setPhotoFile(null)
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, "Could not add the person. Try again."))
+      setPhotoUploading(false)
     }
   }
 
@@ -95,7 +117,14 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-0"
         >
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 space-y-4">
+            <PersonPhotoField
+              value={null}
+              onFileSelect={setPhotoFile}
+              onClearExisting={() => setPhotoFile(null)}
+              disabled={createPerson.isPending || photoUploading}
+              fallbackInitials={initials}
+            />
             <PersonFormFields form={form} />
           </div>
 
@@ -118,11 +147,11 @@ export function AddPersonModal({ open, onOpenChange }: AddPersonModalProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" className="h-10" disabled={createPerson.isPending}>
-              {createPerson.isPending ? (
+            <Button type="submit" className="h-10" disabled={createPerson.isPending || photoUploading}>
+              {createPerson.isPending || photoUploading ? (
                 <>
                   <LoaderCircle className="animate-spin" aria-hidden="true" />
-                  Adding…
+                  {photoUploading ? "Uploading…" : "Adding…"}
                 </>
               ) : (
                 "Add Person"

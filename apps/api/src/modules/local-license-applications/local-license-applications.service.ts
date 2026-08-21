@@ -13,8 +13,11 @@ import {
 import { differenceInYears, parseISO } from 'date-fns';
 import { PeopleService } from '../people/people.service';
 import { LookupService } from '../lookup/lookup.service';
+import { Driver } from '../drivers/entities/driver.entity';
+import { License } from '../licenses/entities/license.entity';
 import { Application } from './entities/application.entity';
 import { LocalDrivingLicenseApplication } from './entities/local-driving-license-application.entity';
+import { TestAppointment } from '../testing/entities/test-appointment.entity';
 import {
   FindAllLocalLicenseApplicationsParams,
   LocalLicenseApplicationsRepository,
@@ -35,7 +38,10 @@ export class LocalLicenseApplicationsService {
   ) {}
 
   // Projects a joined entity into the shared flat DTO.
-  private toDto(lla: LocalDrivingLicenseApplication): LocalDrivingLicenseApplicationDto {
+  private toDto(
+    lla: LocalDrivingLicenseApplication,
+    passedTests = 0,
+  ): LocalDrivingLicenseApplicationDto {
     const { application, licenseClass } = lla;
     return {
       id: lla.id,
@@ -51,6 +57,7 @@ export class LocalLicenseApplicationsService {
       paidFees: application.paidFees,
       applicationDate: application.applicationDate.toISOString(),
       lastStatusDate: application.lastStatusDate.toISOString(),
+      passedTests,
     };
   }
 
@@ -59,7 +66,27 @@ export class LocalLicenseApplicationsService {
     params: FindAllLocalLicenseApplicationsParams,
   ): Promise<{ data: LocalDrivingLicenseApplicationDto[]; meta: PaginatedLocalLicenseApplications['meta'] }> {
     const { data, meta } = await this.appsRepo.findAll(params);
-    return { data: data.map((lla) => this.toDto(lla)), meta };
+    if (data.length === 0) {
+      return { data: [], meta };
+    }
+    const llaIds = data.map((lla) => lla.id);
+    const passedRows: Array<{ llaId: string; passed: string }> = await this.dataSource
+      .getRepository(TestAppointment)
+      .createQueryBuilder('ta')
+      .innerJoin('ta.test', 't')
+      .select('ta.llaId', 'llaId')
+      .addSelect('COUNT(DISTINCT ta.testTypeId)', 'passed')
+      .where('ta.llaId IN (:...llaIds)', { llaIds })
+      .andWhere('t.testResult = :result', { result: true })
+      .groupBy('ta.llaId')
+      .getRawMany();
+    const passedById = new Map<number, number>(
+      passedRows.map((r) => [Number(r.llaId), Number(r.passed)]),
+    );
+    return {
+      data: data.map((lla) => this.toDto(lla, passedById.get(lla.id) ?? 0)),
+      meta,
+    };
   }
 
   // Single application lookup (detail screen); 404 when missing.
@@ -73,7 +100,7 @@ export class LocalLicenseApplicationsService {
 
   // Files a new application: verifies the applicant and the class, snapshots
   // the NewDrivingLicense fee, and writes both rows (Applications + child) atomically.
-  async create(
+  async create( 
     dto: CreateLocalLicenseApplicationRequestDto,
     actingUserId: number,
   ): Promise<LocalDrivingLicenseApplicationDto> {
@@ -94,6 +121,30 @@ export class LocalLicenseApplicationsService {
       throw new BadRequestException(
         `Applicant must be at least ${licenseClass.minimumAllowedAge} to apply for ${licenseClass.className}`,
       );
+    }
+
+    // Fail-fast duplicate guard: if the person is already a driver holding
+    // an active license of this class, reject now instead of after the full
+    // test pipeline. The authoritative inside-transaction guard stays in
+    // LicensesService.issueLicense (invariant #26 / race backstop).
+    const driver = await this.dataSource
+      .getRepository(Driver)
+      .findOne({ where: { personId: dto.personId } });
+    if (driver) {
+      const existingActive = await this.dataSource
+        .getRepository(License)
+        .findOne({
+          where: {
+            driverId: driver.id,
+            licenseClassId: dto.licenseClassId,
+            isActive: true,
+          },
+        });
+      if (existingActive) {
+        throw new ConflictException(
+          `Driver already holds an active ${licenseClass.className} license`,
+        );
+      }
     }
 
     // Fee source = the seeded NewDrivingLicense application type (never from the client).

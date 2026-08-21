@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { Pencil, SearchX, Trash2, Users } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import type { PersonDto } from "@repo/shared"
+import { buildPersonPhotoUrl } from "@/shared/lib/imagekit"
 import { usePeople } from "../hooks/use-people"
 import { EditPersonModal } from "./edit-person-modal"
 import { DeletePersonDialog } from "./delete-person-dialog"
@@ -59,6 +60,12 @@ export function PeopleList() {
       cell: (person) => (
         <div className="flex items-center gap-3">
           <Avatar className="size-9">
+            {buildPersonPhotoUrl(person.photoUrl, { thumbnail: 64 }) ? (
+              <AvatarImage
+                src={buildPersonPhotoUrl(person.photoUrl, { thumbnail: 64 })!}
+                alt={`${person.firstName} ${person.lastName}`}
+              />
+            ) : null}
             <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
               {getInitials(person)}
             </AvatarFallback>

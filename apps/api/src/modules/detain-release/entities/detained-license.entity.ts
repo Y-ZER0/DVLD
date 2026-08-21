@@ -34,9 +34,9 @@ export class DetainedLicense {
   @Column({ name: 'ReleaseDate', type: 'timestamptz', nullable: true })
   releaseDate: Date | null;
 
-  @Column({ name: 'ReleasedByUserID', nullable: true })
+  @Column({ name: 'ReleasedByUserID', type: 'int', nullable: true })
   releasedByUserId: number | null;
 
-  @Column({ name: 'ReleaseApplicationID', nullable: true })
+  @Column({ name: 'ReleaseApplicationID', type: 'int', nullable: true })
   releaseApplicationId: number | null;
 }

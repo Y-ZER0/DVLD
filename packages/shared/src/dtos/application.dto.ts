@@ -14,4 +14,5 @@ export interface LocalDrivingLicenseApplicationDto {
   paidFees: string;
   applicationDate: string;
   lastStatusDate: string;
+  passedTests: number;
 }

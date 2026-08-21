@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -113,6 +114,14 @@ export class TestingService {
           `Cannot schedule ${testType.testTypeTitle} before ${predecessor.testTypeTitle} has been passed`,
         );
       }
+    }
+
+    const appointmentDay = new Date(dto.appointmentDate);
+    appointmentDay.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (appointmentDay < today) {
+      throw new BadRequestException('Appointment date cannot be in the past');
     }
 
     // Insert the slot: fee snapshotted at booking time, unlocked, session user recorded.

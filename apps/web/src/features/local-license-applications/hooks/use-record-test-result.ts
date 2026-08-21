@@ -24,6 +24,7 @@ export function useRecordTestResult(localDrivingLicenseApplicationId: number) {
       queryClient.invalidateQueries({
         queryKey: localLicenseApplicationKeys.pipeline(localDrivingLicenseApplicationId),
       })
+      queryClient.invalidateQueries({ queryKey: localLicenseApplicationKeys.lists() })
     },
   })
 }

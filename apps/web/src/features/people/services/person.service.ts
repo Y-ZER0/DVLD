@@ -36,4 +36,27 @@ export const personService = {
   async deletePerson(id: number): Promise<void> {
     await apiClient.delete<ApiResponse<null>>(`/people/${id}`)
   },
+
+  async uploadTempPhoto(file: File): Promise<string> {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await apiClient.post<ApiResponse<{ url: string }>>('/people/photo-upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data.data.url
+  },
+
+  async uploadPersonPhoto(id: number, file: File): Promise<PersonDto> {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await apiClient.post<ApiResponse<PersonDto>>(`/people/${id}/photo`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data.data
+  },
+
+  async removePersonPhoto(id: number): Promise<PersonDto> {
+    const { data } = await apiClient.delete<ApiResponse<PersonDto>>(`/people/${id}/photo`)
+    return data.data
+  },
 }

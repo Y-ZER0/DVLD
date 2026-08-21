@@ -70,8 +70,8 @@ export function LocalLicenseApplicationsList() {
     },
     {
       header: "Test Progress",
-      cell: () => {
-        const completed = 0
+      cell: (application) => {
+        const completed = application.passedTests ?? 0
         const percent = (completed / TOTAL_TESTS) * 100
         return (
           <div className="flex items-center gap-3">

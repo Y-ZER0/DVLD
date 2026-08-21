@@ -22,7 +22,19 @@ import type { TestStageDto } from "@repo/shared"
 import { useScheduleTestAppointment } from "../../hooks/use-schedule-test-appointment"
 
 const scheduleAppointmentSchema = z.object({
-  appointmentDate: z.string().min(1, "Choose an appointment date"),
+  appointmentDate: z
+    .string()
+    .min(1, "Choose an appointment date")
+    .refine(
+      (value) => {
+        const selected = new Date(value)
+        selected.setHours(0, 0, 0, 0)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        return selected >= today
+      },
+      { message: "Appointment date cannot be in the past" }
+    ),
 })
 
 type ScheduleAppointmentFormValues = z.infer<typeof scheduleAppointmentSchema>
@@ -51,6 +63,7 @@ export function ScheduleAppointmentModal({
   const testTypes = useTestTypes()
   const stageFee = testTypes.data?.find((type) => type.id === stage.testTypeId)?.testTypeFees
   const feeText = stageFee ? `Booking fee: $${stageFee}.` : "Booking fee: —."
+  const todayIso = new Date().toISOString().split("T")[0]
 
   useEffect(() => {
     if (open) {
@@ -91,6 +104,7 @@ export function ScheduleAppointmentModal({
                 <Input
                   id="appointmentDate"
                   type="date"
+                  min={todayIso}
                   className="h-10 cursor-pointer bg-card pr-9 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-auto [&::-webkit-calendar-picker-indicator]:w-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                   aria-invalid={!!form.formState.errors.appointmentDate}
                   {...form.register("appointmentDate")}

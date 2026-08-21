@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CircleAlert, LoaderCircle } from "lucide-react"
 import {
   Dialog,
@@ -15,10 +15,14 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Gender, type PersonDto } from "@repo/shared"
+import { useQueryClient } from "@tanstack/react-query"
 import { getApiErrorMessage } from "@/shared/lib/api-errors"
 import { usePerson } from "../hooks/use-person"
 import { useUpdatePerson } from "../hooks/use-update-person"
+import { personService } from "../services/person.service"
+import { peopleKeys } from "../peopleKeys"
 import { PersonFormFields } from "./person-form-fields"
+import { PersonPhotoField } from "./person-photo-field"
 import type { PersonFormValues } from "./person-form-values"
 
 const updatePersonSchema = z.object({
@@ -65,15 +69,50 @@ export function EditPersonModal({ person, open, onOpenChange }: EditPersonModalP
   })
 
   const updatePerson = useUpdatePerson()
+  const queryClient = useQueryClient()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+
+  const currentPhoto = photoRemoved ? null : (personData?.photoUrl ?? person.photoUrl ?? null)
+  const initials = `${form.watch("firstName")?.charAt(0) ?? person.firstName.charAt(0) ?? ""}${form.watch("lastName")?.charAt(0) ?? person.lastName.charAt(0) ?? ""}`.toUpperCase()
+
+  useEffect(() => {
+    if (open) {
+      setPhotoFile(null)
+      setPhotoRemoved(false)
+      setSubmitError(null)
+    }
+  }, [open])
 
   const onSubmit = async (values: PersonFormValues) => {
     setSubmitError(null)
     try {
       await updatePerson.mutateAsync({ id: person.id, dto: values })
+      if (photoFile) {
+        setPhotoBusy(true)
+        try {
+          await personService.uploadPersonPhoto(person.id, photoFile)
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.lists() })
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.detail(person.id) })
+        } finally {
+          setPhotoBusy(false)
+        }
+      } else if (photoRemoved) {
+        setPhotoBusy(true)
+        try {
+          await personService.removePersonPhoto(person.id)
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.lists() })
+          await queryClient.invalidateQueries({ queryKey: peopleKeys.detail(person.id) })
+        } finally {
+          setPhotoBusy(false)
+        }
+      }
       onOpenChange(false)
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, "Could not save the changes. Try again."))
+      setPhotoBusy(false)
     }
   }
 
@@ -86,7 +125,20 @@ export function EditPersonModal({ person, open, onOpenChange }: EditPersonModalP
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 space-y-4">
+            <PersonPhotoField
+              value={currentPhoto}
+              onFileSelect={(file) => {
+                setPhotoFile(file)
+                if (file) setPhotoRemoved(false)
+              }}
+              onClearExisting={() => {
+                setPhotoRemoved(true)
+                setPhotoFile(null)
+              }}
+              disabled={updatePerson.isPending || photoBusy}
+              fallbackInitials={initials}
+            />
             <PersonFormFields form={form} />
           </div>
 
@@ -109,11 +161,11 @@ export function EditPersonModal({ person, open, onOpenChange }: EditPersonModalP
             >
               Cancel
             </Button>
-            <Button type="submit" className="h-10" disabled={updatePerson.isPending}>
-              {updatePerson.isPending ? (
+            <Button type="submit" className="h-10" disabled={updatePerson.isPending || photoBusy}>
+              {updatePerson.isPending || photoBusy ? (
                 <>
                   <LoaderCircle className="animate-spin" aria-hidden="true" />
-                  Saving…
+                  {photoBusy ? "Uploading…" : "Saving…"}
                 </>
               ) : (
                 "Save Changes"
