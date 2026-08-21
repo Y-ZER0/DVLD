@@ -93,16 +93,18 @@ export class LicensesRepository extends Repository<License> {
     return { data, meta: { total, page, pageSize } };
   }
 
-  // Active licenses with no open detention, newest first — the detention
-  // feature's eligibility source (Feature 9.1): the NOT EXISTS over the
-  // detention table excludes already-detained licenses, mirroring the
+  // Active, unexpired licenses with no open detention, newest first — the
+  // detention feature's eligibility source (Feature 9.1): the NOT EXISTS over
+  // the detention table excludes already-detained licenses, mirroring the
   // register's isDetained flag predicate.
   async findActiveLicensesWithoutOpenDetention(
     page: number,
     pageSize: number,
+    today: string,
   ): Promise<PaginatedActiveCarLicenses> {
     const qb = this.joinedQb()
       .where('license.isActive = :isActive', { isActive: true })
+      .andWhere('license.expirationDate >= :today', { today })
       .andWhere(
         'NOT EXISTS (SELECT 1 FROM "DetainedLicenses" detention ' +
           'WHERE detention."LicenseID" = license.id AND detention."IsReleased" = false)',

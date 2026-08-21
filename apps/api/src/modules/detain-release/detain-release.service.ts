@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
+import { format } from 'date-fns';
 import {
   ApplicationStatus,
   ApplicationType,
@@ -125,8 +126,9 @@ export class DetainReleaseService {
       .applicationFees;
 
     const saved = await this.dataSource.transaction(async (manager) => {
-      // The target license must exist and be active — the picker only offers
-      // eligible rows, but the guard never trusts the UI to have filtered.
+      // The target license must exist and be eligible — the picker only
+      // offers eligible rows, but the guard never trusts the UI to have
+      // filtered (active AND unexpired, mirroring the feed predicate).
       const license = await this.licensesService.findLicenseOnManager(
         manager,
         dto.licenseId,
@@ -134,8 +136,10 @@ export class DetainReleaseService {
       if (!license) {
         throw new NotFoundException('License not found');
       }
-      if (!license.isActive) {
-        throw new ConflictException('Only an active license can be detained');
+      if (!license.isActive || license.expirationDate < format(new Date(), 'yyyy-MM-dd')) {
+        throw new ConflictException(
+          'Only an active, unexpired license can be detained',
+        );
       }
 
       // No double-detaining: a license with an open detention is rejected.

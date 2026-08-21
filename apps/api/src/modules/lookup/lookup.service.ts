@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   ApplicationType as ApplicationTypeEnum,
   ApplicationTypeDto,
@@ -8,11 +12,14 @@ import {
 import { ApplicationType } from './entities/application-type.entity';
 import { LicenseClass } from './entities/license-class.entity';
 import { TestType } from './entities/test-type.entity';
+import { UpdateApplicationTypeRequestDto } from './dtos/update-application-type-request.dto';
+import { UpdateLicenseClassRequestDto } from './dtos/update-license-class-request.dto';
+import { UpdateTestTypeRequestDto } from './dtos/update-test-type-request.dto';
 import { ApplicationTypesRepository } from './repositories/application-types.repository';
 import { LicenseClassesRepository } from './repositories/license-classes.repository';
 import { TestTypesRepository } from './repositories/test-types.repository';
 
-// LookupService — read-only façade over the three configuration tables.
+// LookupService — façade over the three configuration tables; writes affect only the lookup row.
 @Injectable()
 export class LookupService {
   constructor(
@@ -67,6 +74,55 @@ export class LookupService {
   async findTestTypeById(id: number): Promise<TestTypeDto | null> {
     const entity = await this.testTypesRepository.findById(id);
     return entity ? this.toTestTypeDto(entity) : null;
+  }
+
+  // PATCH a license class — single-field partial update, className is immutable.
+  async updateLicenseClass(
+    id: number,
+    dto: UpdateLicenseClassRequestDto,
+  ): Promise<LicenseClassDto> {
+    const entity = await this.licenseClassesRepository.findById(id);
+    if (!entity) throw new NotFoundException('License class not found');
+    if (
+      dto.minimumAllowedAge === undefined &&
+      dto.defaultValidityLength === undefined &&
+      dto.classFees === undefined
+    )
+      throw new BadRequestException('At least one field must be provided');
+    if (dto.minimumAllowedAge !== undefined)
+      entity.minimumAllowedAge = dto.minimumAllowedAge;
+    if (dto.defaultValidityLength !== undefined)
+      entity.defaultValidityLength = dto.defaultValidityLength;
+    if (dto.classFees !== undefined) entity.classFees = dto.classFees.toFixed(2);
+    return this.toLicenseClassDto(await this.licenseClassesRepository.save(entity));
+  }
+
+  // PATCH an application type — fee only, title is immutable.
+  async updateApplicationType(
+    id: number,
+    dto: UpdateApplicationTypeRequestDto,
+  ): Promise<ApplicationTypeDto> {
+    const entity = await this.applicationTypesRepository.findById(id);
+    if (!entity) throw new NotFoundException('Application type not found');
+    if (dto.applicationFees === undefined)
+      throw new BadRequestException('At least one field must be provided');
+    entity.applicationFees = dto.applicationFees.toFixed(2);
+    return this.toApplicationTypeDto(
+      await this.applicationTypesRepository.save(entity),
+    );
+  }
+
+  // PATCH a test type — fee only, title and description are immutable.
+  async updateTestType(
+    id: number,
+    dto: UpdateTestTypeRequestDto,
+  ): Promise<TestTypeDto> {
+    const entity = await this.testTypesRepository.findById(id);
+    if (!entity) throw new NotFoundException('Test type not found');
+    if (dto.testTypeFees === undefined)
+      throw new BadRequestException('At least one field must be provided');
+    entity.testTypeFees = dto.testTypeFees.toFixed(2);
+    return this.toTestTypeDto(await this.testTypesRepository.save(entity));
   }
 
   // Flat projections; fee columns pass through as strings (decimal columns arrive as strings).

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager, MoreThanOrEqual } from 'typeorm';
-import { addYears, format } from 'date-fns';
+import { addMonths, addYears, format } from 'date-fns';
 import {
   ApplicationStatus,
   ApplicationType,
@@ -226,6 +226,24 @@ export class LicensesService {
 
     // The reason picks the application type, whose fee is snapshotted below.
     const { issueReason, applicationTypeTitle } = this.reasonMapping(reason);
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+
+    if (reason !== 'renew' && license.expirationDate < todayStr) {
+      throw new ConflictException(
+        'Expired license cannot be replaced — renew it instead',
+      );
+    }
+
+    if (reason === 'renew' && license.expirationDate >= todayStr) {
+      const sixMonthsFromNow = format(addMonths(now, 6), 'yyyy-MM-dd');
+      if (license.expirationDate > sixMonthsFromNow) {
+        throw new ConflictException(
+          'License can only be renewed within 6 months of expiry',
+        );
+      }
+    }
+
     const applicationType = await this.lookupService.findApplicationTypeByTitle(
       applicationTypeTitle,
     );
@@ -235,7 +253,7 @@ export class LicensesService {
       );
     }
 
-    const issueDate = new Date();
+    const issueDate = now;
     const saved = await this.dataSource.transaction(async (manager) => {
       // A license under an open detention can't be touched here (invariant #32).
       if (await this.detainReleaseService.hasOpenDetention(manager, existingLicenseId)) {
@@ -306,9 +324,9 @@ export class LicensesService {
     );
   }
 
-  // Active licenses with no open detention, newest first — the detention
-  // feature's "Select active license" feed (the DTO mapping lives in the
-  // detain-release module, international precedent).
+  // Active, unexpired licenses with no open detention, newest first — the
+  // detention feature's "Select active license" feed (the DTO mapping lives in
+  // the detain-release module, international precedent).
   async findEligibleForDetention(
     page: number,
     pageSize: number,
@@ -316,6 +334,7 @@ export class LicensesService {
     return this.licensesRepo.findActiveLicensesWithoutOpenDetention(
       page,
       pageSize,
+      format(new Date(), 'yyyy-MM-dd'),
     );
   }
 

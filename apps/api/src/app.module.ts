@@ -11,6 +11,7 @@ import { LocalLicenseApplicationsModule } from './modules/local-license-applicat
 import { LookupModule } from './modules/lookup/lookup.module';
 import { PeopleModule } from './modules/people/people.module';
 import { TestingModule } from './modules/testing/testing.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { UsersModule } from './modules/users/users.module';
     LicensesModule,
     DetainReleaseModule,
     InternationalLicensesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
 })

@@ -18,6 +18,10 @@ export class ApplicationTypesRepository extends Repository<ApplicationType> {
     return this.find({ order: { id: 'ASC' } });
   }
 
+  async findById(id: number): Promise<ApplicationType | null> {
+    return this.findOneBy({ id });
+  }
+
   // Single-row lookup by enum label — the stored column IS the label.
   async findByTitle(title: ApplicationTypeEnum): Promise<ApplicationType | null> {
     return this.findOneBy({ applicationTypeTitle: title });

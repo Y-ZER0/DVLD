@@ -12,3 +12,5 @@ export * from './international-license.dto';
 export * from './international-eligible-driver.dto';
 export * from './detention-register-row.dto';
 export * from './eligible-license-for-detention.dto';
+export * from './driver.dto';
+export * from './dashboard.dto';

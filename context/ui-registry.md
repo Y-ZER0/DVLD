@@ -417,6 +417,139 @@ Last updated: 2026-08-12
 | Shadow           | none |
 | Accent usage     | icon `size-4` shrink-0; collapsed rail: icon-only + `Tooltip side="right"` with the label |
 
+### DriverLookupCard
+
+File: `apps/web/src/features/drivers/components/driver-lookup-card.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-card` (Card) |
+| Border           | `border border-border` |
+| Border radius    | `rounded-xl` (Card) |
+| Text — primary   | title `text-base font-semibold`; input `text-sm` |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; search icon `text-muted-foreground` |
+| Spacing          | card `p-6` `gap-4`; form `gap-3 sm:flex-row`; input `h-10 pl-9` |
+| Hover state      | none (form card) |
+| Shadow           | `shadow-sm` |
+| Accent usage     | primary `Search` button `bg-primary text-primary-foreground` `h-10`; `Search` lucide `size-4` |
+
+**Pattern notes:** Enterprise lookup card per Session 25 spec: white `rounded-xl border bg-card shadow-sm` container (`Card`/`CardContent`), `h2 text-base font-semibold` "Driver Lookup" + `text-sm text-muted-foreground` subtitle "Enter a National Number (e.g. N-30871234)…", then an inline `flex-col sm:flex-row` form: leading-icon `Input` (`Search` absolute `left-3 size-4 text-muted-foreground`, `h-10 pl-9`, placeholder "National ID, Driver ID, or name…") + solid primary `Search` button (`h-10 shrink-0`). Plain controlled `useState` + `useEffect` sync on `defaultValue` (search precedent — not RHF/zod, since there is no validation schema for an optional lookup term; follows DataTable filter + TopBar quick-search pattern). Submit trims and calls `onSearch`; parent lifts `searchTerm` (directory) or `router.push(/drivers?search=…)` (detail page — directory is the single switching surface). `?search=` pre-fill via async `searchParams` prop avoids `useSearchParams` Suspense bailout.
+
+### DriverDirectoryTable (Registered Drivers)
+
+File: `apps/web/src/features/drivers/components/driver-directory-table.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared `DataTable` (`bg-card`) |
+| Border           | handled by shared `DataTable` (`border-border`) |
+| Border radius    | handled by shared `DataTable` (`rounded-xl`) |
+| Text — primary   | Driver ID `font-mono text-sm font-bold` (`DRV-{id}`); Name `text-sm font-bold`; header `text-lg font-semibold` |
+| Text — secondary | email `text-xs text-muted-foreground` (truncate + `title`); national `font-mono text-sm`; licenses `text-sm tabular-nums`; subtitle `text-sm text-muted-foreground` |
+| Spacing          | header block `flex flex-col gap-1`; DataTable footer `p-4` (shared) |
+| Hover state      | shared DataTable row hover `hover:bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | In Good Standing `bg-success/10 text-success`; Has Detained License `bg-destructive/10 text-destructive`; View History `Button variant="outline" h-10 bg-card` |
+
+**Pattern notes:** Drivers-directory DataTable (`showSearch={false}` + `header` — register precedent). Six columns per spec: Driver ID (`DRV-{id}` mono bold), Name (bold stacked above muted email with `truncate` + `title`), National Number (mono), Licenses (`N active / M total` tabular), Status (two-pill `Badge`: green vs red), Action right-aligned outline "View History" (`useRouter.push(/drivers/{id})`). Owns `page` state (`PAGE_SIZE=10`); switches between `useDrivers({page,pageSize})` and `useDriverSearch({search,page,pageSize})` via `isSearching` (trimmed length >0); `useEffect` resets `page` on `searchTerm` change so a narrow result set never strands page N. Header shows "All drivers on record. Select one…" normally, or `Showing results for "term" · Clear` when searching (clear button `text-primary underline-offset-4`). Empty: search miss (`No drivers match "term"` + retry `Clear search`) vs no drivers (`Drivers are created automatically…`).
+
+### DriverProfileSummaryCard
+
+File: `apps/web/src/features/drivers/components/driver-profile-summary-card.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | `bg-card` (Card) |
+| Border           | `border border-border` |
+| Border radius    | `rounded-xl` (Card) |
+| Text — primary   | name `text-xl font-bold`; Driver ID `font-mono text-sm font-medium` (`DRV-{id}`) |
+| Text — secondary | national `font-mono text-sm text-muted-foreground`; field labels `text-xs text-muted-foreground`; field values `text-sm font-medium` (truncate + `title`) |
+| Spacing          | card `p-6 gap-6`; header `gap-4` (avatar + name); grid `grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4`; column `flex flex-col gap-5` |
+| Hover state      | none |
+| Shadow           | `shadow-sm` |
+| Accent usage     | avatar `size-12 bg-primary/10 text-primary` (AvatarFallback `bg-primary/10 text-sm font-bold text-primary` — 2-letter initials); skeleton `size-12 rounded-full` + `h-6 w-40`/`h-4 w-28` |
+
+**Pattern notes:** Implements the `ProfileSummaryCard` spec row (ui-registry top table) — now the concrete `DriverProfileSummaryCard`. Header: soft-blue circular avatar (initials from first+last, `bg-primary/10 text-primary` — PeopleList avatar precedent) beside `h2 text-xl font-bold` name stacked above mono national number. Below: 4-column KV grid collapsing `1→2→4` cols at `sm`/`lg`; columns are `DoB/Email | Gender/Address | Phone/DriverID | Country/Since` per approved prompt. Each `Field` is label `text-xs text-muted-foreground` + `mt-1 text-sm font-medium truncate` value with native `title`; dates formatted `en-GB [DD Mon YYYY]` (`T00:00:00` parse for `dateOfBirth` DATE, direct `new Date(iso)` for `driverSince` timestamptz). `DriverProfileSummaryCardSkeleton` mirrors the structure (avatar + 8 field skeletons). Error/loading handled by the parent detail page (centered retry card).
+
+### TabbedDetailView (Drivers detail — actual implementation)
+
+File: `apps/web/src/features/drivers/drivers-detail-page.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | tab triggers active `bg-accent`; inactive `bg-muted`; panels `bg-card` (DataTable) |
+| Border           | trigger `border-transparent` (Tabs primitive); panels `border-border` (DataTable Card) |
+| Border radius    | triggers `rounded-full` (pill); panels `rounded-xl` (DataTable) |
+| Text — primary   | active trigger `font-bold text-accent-foreground`; inactive `text-muted-foreground`; count `(n)` live |
+| Text — secondary | page subtitle `text-sm text-muted-foreground` |
+| Spacing          | page `gap-6`; tabs `gap-4`; `TabsList` `gap-2` `h-auto w-fit bg-transparent p-0`; triggers `px-4 py-1.5` |
+| Hover state      | inactive `hover:bg-muted/80 hover:text-foreground` |
+| Shadow           | active pill `shadow-sm`; panels `shadow-sm` |
+| Accent usage     | active pill `bg-accent text-accent-foreground` (light-blue `#eff6ff` tint); inactive `bg-muted text-muted-foreground` soft gray |
+
+**Pattern notes:** First `TabbedDetailView` implementation (ui-registry top table planned it; this is the concrete build). Uses shadcn `Tabs` (`components/ui/tabs.tsx` generated via `shadcn add tabs` — `radix-nova` `TabsPrimitive`, not hand-rolled) restyled via `className` only: `TabsList` is `bg-transparent p-0 h-auto w-fit gap-2`, each `TabsTrigger` is a pill `rounded-full px-4 py-1.5 text-sm font-medium` — active `bg-accent text-accent-foreground font-bold shadow-sm` (light-blue badge per prompt), inactive `bg-muted text-muted-foreground hover:bg-muted/80`. Three triggers with live counts: `Local Licenses (n)` / `International (n)` / `Test Log (n)` — counts are `rows.length` from the 4 independent queries (`useDriverSummary` + 3 history hooks, fire at page level per build-plan). Each `TabsContent` hosts its own `DataTable` (history tables below). State is `useState<HistoryTab>("local")` driven by `Tabs onValueChange`; triggers also carry `onClick` (redundant, kept for explicit intent). Detail lookup card submit navigates to `/drivers?search=term` (directory as the switching surface). Page footer: bottom-left outline "Back to all drivers" (`ArrowLeft` + `Button variant="outline" h-10 bg-card` inside `Link href="/drivers"`) per prompt. Loading = `DriverProfileSummaryCardSkeleton` + pill skeletons; error = centered `role="alert"` retry card (local-detail-page precedent). `?search=` pre-fill via async `searchParams` prop in both `app/(protected)/drivers/*` routes.
+
+### LocalLicenseHistoryTable
+
+File: `apps/web/src/features/drivers/components/local-license-history-table.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`) |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | License `font-mono text-sm font-bold` (`LIC-{id}`); Class/Reason `text-sm`; header `text-lg font-semibold` |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; Issued/Expires `text-sm tabular-nums`; Fees `text-sm tabular-nums` |
+| Spacing          | header `mt-0.5` between title/subtitle; DataTable `px-4 pt-4 pb-3` (header prop) |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | Detained `bg-destructive/10 text-destructive`; Inactive `bg-neutral-tint text-neutral-tint-foreground`; Active `bg-success/10 text-success`; empty `IdCard size-8 text-muted-foreground` |
+
+**Pattern notes:** Driver-scoped local-history DataTable (`showSearch={false}` + `header` — same DataTable extension as 7.2's `LicenseRegisterTable` that introduced these props). Seven columns per prompt exactly: License (`LIC-{id}` mono bold), Class, Issue Reason (`REASON_LABELS` 1→First Time/2→Renewed/3→Damaged/4→Lost — 7.2 precedent), Issued, Expires (`en-GB [DD Mon YYYY]` via `new Date(iso+"T00:00:00")`), Fees (`$` tabular), Status (three-pill reuse of 7.2 `licenseStatusFor`: Detained red / Inactive gray / Active green — `isDetained` comes from 10.1's `LicenseRegisterRowDto`). Parent passes `rows/isPending/isError/onRetry`; table itself sets `total=rows.length page=1 totalPages=1` (endpoint returns an array, no pagination — satisfies DataTable contract with `Page 1 of 1`). Empty: `IdCard` + "No local licenses on file".
+
+### InternationalLicenseHistoryTable
+
+File: `apps/web/src/features/drivers/components/international-license-history-table.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`) |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | License `font-mono text-sm font-bold` (`INT-{id}`); Based On `font-mono text-sm` (`LIC-{id}`); header `text-lg font-semibold` |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; Issued/Expires `text-sm tabular-nums` |
+| Spacing          | header `mt-0.5`; DataTable `px-4 pt-4 pb-3` |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | Expired `bg-neutral-tint text-neutral-tint-foreground` (soft gray — 8.2 spec); Active `bg-success/10 text-success`; empty `ShieldCheck size-8 text-muted-foreground` |
+
+**Pattern notes:** Driver-scoped international-history DataTable (same `showSearch={false}`+`header` pattern). Five columns — drops the redundant Driver column from Feature 8's `InternationalLicensesTable` (6 columns incl. Driver) because the page *is* the driver; this matches how the local tab drops Driver/National from 7.2's register. Columns: License `INT-{id}`, Based On `LIC-{id}`, Issued, Expires (`en-US [Mon DD, YYYY]` via `T00:00:00` parse — 8.2's format, not 7.2's en-GB), Status derived from dates (`expirationDate < todayIso()` → Expired gray vs Active green — same `todayIso()` YYYY-MM-DD string-compare contract as 8.2; `isActive` column is never trusted). Build-plan "same shape as Feature 8, filtered to this driver" deviation is the Driver-column omission — flagged for REVIEW.
+
+### DriverTestLogTable
+
+File: `apps/web/src/features/drivers/components/driver-test-log-table.tsx`
+Last updated: 2026-08-21
+
+| Property         | Class           |
+| ---------------- | --------------- |
+| Background       | handled by shared DataTable (`bg-card`) |
+| Border           | handled by shared DataTable (`border-border`) |
+| Border radius    | handled by shared DataTable (`rounded-xl`) |
+| Text — primary   | Test `font-mono text-sm font-bold` (`TEST-{id}`); Stage/App `text-sm`; header `text-lg font-semibold` |
+| Text — secondary | subtitle `text-sm text-muted-foreground`; Date `text-sm tabular-nums`; Notes `text-sm text-muted-foreground truncate` (`max-w-[220px]`) |
+| Spacing          | header `mt-0.5`; DataTable `px-4 pt-4 pb-3`; Notes cell `block max-w-[220px] truncate` + `title` |
+| Hover state      | shared DataTable row hover `bg-muted/50` |
+| Shadow           | shared DataTable `shadow-sm` |
+| Accent usage     | Passed `bg-success/10 text-success`; Failed `bg-destructive/10 text-destructive`; empty `ClipboardList size-8 text-muted-foreground` |
+
+**Pattern notes:** Driver-scoped test-log DataTable (`showSearch={false}`+`header`). Seven columns (prompt left this open; spec chosen in ARCHITECT): Test `TEST-{testId}` mono bold, Stage (`testTypeTitle`), Date (`en-GB [DD Mon YYYY]` from `appointmentDate` ISO timestamptz via `new Date(iso)` — 9.2 detain-date precedent, not the `T00:00:00` DATE trick), Result pill (Passed green / Failed red — two-pill, unlike the three-pill license registers), Fees (`$` tabular), App `L-{applicationId}` mono, Notes (`truncate` + `title`, `—` when null). Newest-first is server-guaranteed (10.1 `test.id IS NOT NULL` + `newest first`); client renders as-is. `getRowId` is `testId`. Empty: `ClipboardList` + "No tests on file" hint.
+
 **Pattern notes:** Links are `Button ghost asChild > Link` — never a bare `<a>` (button primitives own focus states). Active check in the parent (`sidebar-navigation.tsx`): exact match, or deeper path within the section (`/applications/local/[id]` lights `/applications/local`). Icon-rail label is `sr-only` (never removed from the a11y tree). Only `SidebarNavItem` patterns here — `IconActionButton` (ghost sizes for tables) is a different shape.
 
 ### SidebarNavigation (brand header + nav groups)
